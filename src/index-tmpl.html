@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-us">
+    <head>
+        <meta charset="utf-8">
+        <title>Wordle-bg</title>
+
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="Wordle-bg" />
+        <meta name="twitter:description" content="Bulgarian clone of Wordle" />
+        <meta name="twitter:image" content="https://wordle.bg/logo-twitter.png" />
+
+        <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
+        <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+        <link rel="manifest" href="/manifest.json">
+        <meta name="msapplication-TileColor" content="#ffffff">
+        <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+        <meta name="theme-color" content="#ffffff">
+
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div id="main-controls">
+            <div id="container_canvas" hidden>
+                <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+            </div>
+        </div>
+
+        <div id="footer" class="cell-version">
+            <span>
+                Build time: <span class="nav-link">@GIT_DATE@</span> |
+                Commit hash: <a class="nav-link" href="https://github.com/ggerganov/wordle.bg/commit/@GIT_SHA1@">@GIT_SHA1@</a> |
+                Commit subject: <span class="nav-link">@GIT_COMMIT_SUBJECT@</span> |
+            </span>
+        </div>
+        <div class="cell-about">
+            <a class="nav-link" href="https://github.com/ggerganov/wordle.bg"><span class="d-none d-sm-inline">View on GitHub </span>
+                <svg version="1.1" width="16" height="16" viewBox="0 0 16 16" class="octicon octicon-mark-github" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
+            </a>
+        </div>
+
+        <script type='text/javascript'>
+            var isInitialized = false;
+
+            function onkeydown(event) {
+                if (event.keyCode >= 112 && event.keyCode <= 123) {
+                    event.stopImmediatePropagation();
+                } else if (
+                        event.keyCode == 8 || // Backspace
+                        event.keyCode == 9 || // Tab
+                        event.keyCode == 46 || // Delete
+                        (event.keyCode >= 37 && event.keyCode <= 40)) { // Arrow keys
+                    event.preventDefault();
+                }
+            }
+
+            function init() {
+                document.getElementById('container_status').innerHTML = "WebAssembly module initialized successfully! Press the Init button to start:"
+                document.getElementById('container_status').style.color = "#00ff00";
+
+                document.getElementById("butInit").disabled = false;
+
+                window.addEventListener('keydown', onkeydown, true);
+            }
+
+            function doInit() {
+                adjustAudioConstraints();
+
+                if (isInitialized == false) {
+                    Module._do_init();
+                    var el = document.getElementById("container_status");
+                    el.parentNode.removeChild(el);
+                    el = document.getElementById("container_button");
+                    el.parentNode.removeChild(el);
+                    isInitialized = true;
+                }
+
+                var x = document.getElementById("container_canvas");
+                x.hidden = false;
+            }
+
+            var Module = {
+                arguments: [],
+                preRun: [(function() { }) ],
+                postRun: [(function () {
+                    init();
+                })
+                ],
+                canvas: (function() {
+                    var canvas = document.getElementById('canvas');
+                    canvas.addEventListener("webglcontextlost", function(e) {
+                        alert('WebGL context lost. You will need to reload the page.'); e.preventDefault();
+                    }, false);
+
+                    return canvas;
+                })(),
+                print: function(text) {
+                    text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text);
+                },
+                printErr: function(text) {
+                    text = Array.prototype.slice.call(arguments).join(' ');
+                    console.error(text);
+                },
+                setStatus: function(text) {
+                    console.log("status: " + text);
+                },
+                monitorRunDependencies: function(left) {
+                    // no run dependencies to log
+                }
+            };
+
+            window.onerror = function() {
+                console.log("onerror: " + JSON.stringify(event));
+                document.getElementById('container_status').innerHTML = JSON.stringify(event);
+                document.getElementById('container_status').style.color = "#ff0000";
+                document.getElementById('container_button').hidden = true;
+            };
+        </script>
+
+        <script type="text/javascript" src="gghelpers.js"></script>
+        <script async type="text/javascript" src="wordle.js"></script>
+    </body>
+</html>
