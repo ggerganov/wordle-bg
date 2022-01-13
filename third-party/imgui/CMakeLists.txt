@@ -4,7 +4,7 @@ else (APPLE)
     unset(ADDITIONAL_LIBRARIES)
 endif (APPLE)
 
-add_library(imgui SHARED
+add_library(imgui
     imgui/imgui.cpp
     imgui/imgui_draw.cpp
     imgui/imgui_demo.cpp
@@ -22,6 +22,10 @@ target_include_directories(imgui PRIVATE
 
 target_link_libraries(imgui PRIVATE
     ${ADDITIONAL_LIBRARIES}
+    )
+
+target_compile_definitions(imgui PUBLIC
+    IMGUI_USER_CONFIG="../imgui-extra/imconfig-vtx32.h"
     )
 
 if (EMSCRIPTEN)
@@ -42,7 +46,7 @@ if (EMSCRIPTEN)
 else()
     find_package(OpenGL REQUIRED)
 
-    add_library(imgui-sdl2 SHARED
+    add_library(imgui-sdl2
         imgui-extra/imgui_impl.cpp
         imgui/backends/imgui_impl_sdl.cpp
         imgui/backends/imgui_impl_opengl3.cpp
@@ -59,13 +63,12 @@ else()
 
     target_link_libraries(imgui-sdl2 PUBLIC
         imgui
+        ${OPENGL_LIBRARIES}
         ${SDL2_LIBRARIES}
-        ${OPENGL_LIBRARIES} # TODO : make this private?
         )
 
     target_link_libraries(imgui-sdl2 PRIVATE
         ${CMAKE_DL_LIBS}
-        ${CMAKE_THREAD_LIBS_INIT}
         ${ADDITIONAL_LIBRARIES}
         )
 endif()

@@ -2,102 +2,202 @@
 <html lang="en-us">
     <head>
         <meta charset="utf-8">
-        <title>Wordle-bg</title>
+
+        <title>Уърдъл - Ежедневна игра на думи</title>
+        <meta name="description" content="Познай скритата дума от 6 опита. Всеки ден има нов пъзел.">
 
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no"/>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
 
+        <!-- FB Meta Tags -->
+        <meta property="og:url" content="https://wordle-bg.ggerganov.com">
+        <meta property="og:type" content="website">
+        <meta property="og:title" content="Уърдъл - Ежедневна игра на думи">
+        <meta property="og:description" content="Познай скритата дума от 6 опита. Всеки ден има нов пъзел.">
+
+        <!-- Twitter Meta Tags -->
         <meta name="twitter:card" content="summary_large_image">
-        <meta name="twitter:title" content="Wordle-bg" />
-        <meta name="twitter:description" content="Bulgarian clone of Wordle" />
-        <meta name="twitter:image" content="https://wordle.bg/logo-twitter.png" />
+        <meta property="twitter:domain" content="ggerganov.com">
 
-        <link rel="apple-touch-icon" sizes="57x57" href="/apple-icon-57x57.png">
-        <link rel="apple-touch-icon" sizes="60x60" href="/apple-icon-60x60.png">
-        <link rel="apple-touch-icon" sizes="72x72" href="/apple-icon-72x72.png">
-        <link rel="apple-touch-icon" sizes="76x76" href="/apple-icon-76x76.png">
-        <link rel="apple-touch-icon" sizes="114x114" href="/apple-icon-114x114.png">
-        <link rel="apple-touch-icon" sizes="120x120" href="/apple-icon-120x120.png">
-        <link rel="apple-touch-icon" sizes="144x144" href="/apple-icon-144x144.png">
-        <link rel="apple-touch-icon" sizes="152x152" href="/apple-icon-152x152.png">
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon-180x180.png">
-        <link rel="icon" type="image/png" sizes="192x192"  href="/android-icon-192x192.png">
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-        <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-        <link rel="manifest" href="/manifest.json">
+        <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta http-equiv="Pragma" content="no-cache" />
+        <meta http-equiv="Expires" content="0" />
+
+        <!--
+        <link rel="apple-touch-icon" sizes="57x57" href="/icons/apple-icon-57x57.png">
+        <link rel="apple-touch-icon" sizes="60x60" href="/icons/apple-icon-60x60.png">
+        <link rel="apple-touch-icon" sizes="72x72" href="/icons/apple-icon-72x72.png">
+        <link rel="apple-touch-icon" sizes="76x76" href="/icons/apple-icon-76x76.png">
+        <link rel="apple-touch-icon" sizes="114x114" href="/icons/apple-icon-114x114.png">
+        <link rel="apple-touch-icon" sizes="120x120" href="/icons/apple-icon-120x120.png">
+        <link rel="apple-touch-icon" sizes="144x144" href="/icons/apple-icon-144x144.png">
+        <link rel="apple-touch-icon" sizes="152x152" href="/icons/apple-icon-152x152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-icon-180x180.png">
+        <link rel="icon" type="image/png" sizes="192x192"  href="/icons/android-icon-192x192.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="96x96" href="/icons/favicon-96x96.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16x16.png">
+        <link rel="manifest" href="/icons/manifest.json">
         <meta name="msapplication-TileColor" content="#ffffff">
-        <meta name="msapplication-TileImage" content="/ms-icon-144x144.png">
+        <meta name="msapplication-TileImage" content="/icons/ms-icon-144x144.png">
         <meta name="theme-color" content="#ffffff">
+        -->
 
         <link rel="stylesheet" href="style.css">
+
+        <script type="text/javascript" src="helpers.js"></script>
     </head>
     <body>
-        <div id="main-controls">
-            <div id="container_canvas" hidden>
-                <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-            </div>
-        </div>
+        <div id="main-container">
+            <div id="description" align="center">
+                <h2>Уърдъл</h2>
 
-        <div id="footer" class="cell-version">
-            <span>
-                Build time: <span class="nav-link">@GIT_DATE@</span> |
-                Commit hash: <a class="nav-link" href="https://github.com/ggerganov/wordle.bg/commit/@GIT_SHA1@">@GIT_SHA1@</a> |
-                Commit subject: <span class="nav-link">@GIT_COMMIT_SUBJECT@</span> |
-            </span>
-        </div>
-        <div class="cell-about">
-            <a class="nav-link" href="https://github.com/ggerganov/wordle.bg"><span class="d-none d-sm-inline">View on GitHub </span>
-                <svg version="1.1" width="16" height="16" viewBox="0 0 16 16" class="octicon octicon-mark-github" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path></svg>
-            </a>
+                <div id="container_status" align="center">
+                    Зареждане - моля изчакайте ...
+                </div>
+            </div>
+            <div id="container_canvas" hidden>
+                <canvas class="emscripten" id="canvas"></canvas>
+            </div>
         </div>
 
         <script type='text/javascript'>
             var isInitialized = false;
+            var failedToInitialize = false;
+
+            function updateWindowSize() {
+                var w = window,
+                    d = document,
+                    e = d.documentElement,
+                    g = d.getElementsByTagName('body')[0],
+                    x = w.innerWidth || e.clientWidth || g.clientWidth,
+                    y = w.innerHeight|| e.clientHeight|| g.clientHeight;
+                Module.set_window_size(0.99*x, 0.99*y);
+            }
+
+            window.setInterval(function(){
+                if (isInitialized == false) return;
+
+                updateWindowSize();
+
+                var dataAttempts = Module.get_attempts();
+                if (dataAttempts.length > 0) {
+                    localStorage.attempts = dataAttempts;
+                }
+
+                var dataStatistics = Module.get_statistics();
+                if (dataStatistics.length > 0) {
+                    localStorage.statistics = dataStatistics;
+                }
+
+                var dataSettings = Module.get_settings();
+                if (dataSettings.length > 0) {
+                    localStorage.settings = dataSettings;
+                }
+
+                var dataClipboard = Module.get_clipboard();
+                if (dataClipboard.length > 0) {
+                    copyToClipboard(dataClipboard);
+                    if (navigator.share) {
+                        navigator.share({
+                                        title: document.title,
+                                        text: dataClipboard
+                                        //,url: window.location.href
+                        })
+                            .then(() => console.log('Successful share'))
+                            .catch(error => console.log('Error sharing:', error));
+                    }
+                    console.log(dataClipboard);
+                }
+            }, 500);
 
             function onkeydown(event) {
-                if (event.keyCode >= 112 && event.keyCode <= 123) {
+                //console.log(event);
+
+                if (event.ctrlKey ||
+                    (event.keyCode >= 112 && event.keyCode <= 123)) {
                     event.stopImmediatePropagation();
-                } else if (
-                        event.keyCode == 8 || // Backspace
-                        event.keyCode == 9 || // Tab
-                        event.keyCode == 46 || // Delete
-                        (event.keyCode >= 37 && event.keyCode <= 40)) { // Arrow keys
+                    return;
+                }
+
+                if (event.keyCode == 8 || // Backspace
+                    event.keyCode == 9 || // Tab
+                    event.keyCode == 46 || // Delete
+                    (event.keyCode >= 37 && event.keyCode <= 40)) { // Arrow keys
                     event.preventDefault();
                 }
             }
 
+            function checkForActions(event) {
+                setTimeout(function() { 
+                }, 250);
+            }
+
             function init() {
-                document.getElementById('container_status').innerHTML = "WebAssembly module initialized successfully! Press the Init button to start:"
+                document.getElementById('container_status').innerHTML = "WebAssembly module initialized successfully!"
                 document.getElementById('container_status').style.color = "#00ff00";
 
-                document.getElementById("butInit").disabled = false;
-
                 window.addEventListener('keydown', onkeydown, true);
+                window.addEventListener('touchend', checkForActions, true);
+                window.addEventListener('mouseup', checkForActions, true);
             }
 
             function doInit() {
-                adjustAudioConstraints();
-
                 if (isInitialized == false) {
-                    Module._do_init();
-                    var el = document.getElementById("container_status");
-                    el.parentNode.removeChild(el);
-                    el = document.getElementById("container_button");
-                    el.parentNode.removeChild(el);
+                    var puzzleIdOffset = findGetParameter('p') || 0;
+                    Module.set_timestamp((new Date().getTime()/1000) + 24*3600*puzzleIdOffset);
+
+                    if (localStorage.getItem('attempts') !== null) {
+                        Module.set_attempts(localStorage.attempts);
+                    }
+
+                    if (localStorage.getItem('statistics') !== null) {
+                        Module.set_statistics(localStorage.statistics);
+                    }
+
+                    if (localStorage.getItem('settings') !== null) {
+                        Module.set_settings(localStorage.settings);
+                    }
+
+                    if (Module.do_init() == false) {
+                        failedToInitialize = true;
+                        window.onerror('Failed to initialize WASM module');
+                        return;
+                    }
+
+                    updateWindowSize();
+
                     isInitialized = true;
                 }
 
-                var x = document.getElementById("container_canvas");
-                x.hidden = false;
+                {
+                    var status = document.getElementById("description");
+                    status.hidden = true;
+                }
+
+                {
+                    var canvas = document.getElementById("container_canvas");
+                    canvas.hidden = false;
+                    canvas.classList.add("fade-in");
+                }
             }
 
             var Module = {
                 arguments: [],
-                preRun: [(function() { }) ],
+                preRun: [(function() {
+                    console.log(
+                            '    Build time: @GIT_DATE@\n' +
+                            '   Github repo: https://github.com/ggerganov/wordle-bg\n' +
+                            '   Commit hash: https://github.com/ggerganov/wordle-bg/commit/@GIT_SHA1@"\n' +
+                            'Commit subject: @GIT_COMMIT_SUBJECT@\n'
+                    );
+                })],
                 postRun: [(function () {
+                    if (failedToInitialize) return;
+
                     init();
-                })
-                ],
+                    doInit();
+                })],
                 canvas: (function() {
                     var canvas = document.getElementById('canvas');
                     canvas.addEventListener("webglcontextlost", function(e) {
@@ -122,15 +222,15 @@
                 }
             };
 
-            window.onerror = function() {
+            window.onerror = function(event) {
+                failedToInitialize = true;
                 console.log("onerror: " + JSON.stringify(event));
                 document.getElementById('container_status').innerHTML = JSON.stringify(event);
+                document.getElementById('container_status').innerHTML += '<br>This browser is not supported. Please try a different browser';
                 document.getElementById('container_status').style.color = "#ff0000";
-                document.getElementById('container_button').hidden = true;
             };
         </script>
 
-        <script type="text/javascript" src="gghelpers.js"></script>
-        <script async type="text/javascript" src="wordle.js"></script>
+        <script>document.write('<script async type="text/javascript" src="wordle.js?dev=' + Math.floor(Math.random() * 1000) + '"\><\/script>');</script>
     </body>
 </html>

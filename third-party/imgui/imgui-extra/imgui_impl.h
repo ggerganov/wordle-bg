@@ -4,6 +4,10 @@
 
 #pragma once
 
+#if (defined(__EMSCRIPTEN__))
+#define IMGUI_IMPL_OPENGL_LOADER_GLEW
+#endif
+
 #include "imgui/imgui.h"
 
 struct SDL_Window;
