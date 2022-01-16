@@ -48,12 +48,13 @@ const float kTimeIncorrect  = 1.00f; // time to display text about incorrect inp
 // 15 Jan 2022 00:00:00
 const int64_t kTimestamp0 = 1642197600;
 
-// colors
+// available color themes
 enum class EColorTheme {
     Light,
     Dark,
 };
 
+// colors
 enum class EColor {
     Title,
     Text,
@@ -115,7 +116,8 @@ const std::map<EColorTheme, TColorTheme> kColorThemes = {
     },
 };
 
-const ImVec4 kColorFade            = { float(0x00)/256.0f, float(0x00)/256.0f, float(0x00)/256.0f, 0.50f };
+// used for the fade in/out effects
+const ImVec4 kColorFade = { float(0x00)/256.0f, float(0x00)/256.0f, float(0x00)/256.0f, 0.50f };
 
 // special keys
 const auto kInputEnter     = ICON_FA_CHECK;
