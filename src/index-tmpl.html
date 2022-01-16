@@ -62,6 +62,7 @@
         </div>
 
         <script type='text/javascript'>
+            var isMobile = mobileCheck();
             var isInitialized = false;
             var failedToInitialize = false;
 
@@ -94,21 +95,6 @@
                 if (dataSettings.length > 0) {
                     localStorage.settings = dataSettings;
                 }
-
-                var dataClipboard = Module.get_clipboard();
-                if (dataClipboard.length > 0) {
-                    copyToClipboard(dataClipboard);
-                    if (navigator.share) {
-                        navigator.share({
-                                        title: document.title,
-                                        text: dataClipboard
-                                        //,url: window.location.href
-                        })
-                            .then(() => console.log('Successful share'))
-                            .catch(error => console.log('Error sharing:', error));
-                    }
-                    console.log(dataClipboard);
-                }
             }, 500);
 
             function onkeydown(event) {
@@ -129,7 +115,24 @@
             }
 
             function checkForActions(event) {
-                setTimeout(function() { 
+                setTimeout(function() {
+                    var dataClipboard = Module.get_clipboard();
+                    if (dataClipboard.length > 0) {
+                        console.log(dataClipboard);
+                        if (!isMobile) {
+                            copyToClipboard(dataClipboard);
+                        } else {
+                            if (navigator.share) {
+                                navigator.share({
+                                                title: document.title,
+                                                text: dataClipboard
+                                                //,url: window.location.href
+                                })
+                                    .then(() => console.log('Successful share'))
+                                    .catch(error => console.log('Error sharing:', error));
+                            }
+                        }
+                    }
                 }, 250);
             }
 

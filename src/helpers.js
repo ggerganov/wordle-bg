@@ -9,42 +9,43 @@ function checkSharedArrayBuffer() {
     return true;
 }
 
-// ref : https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
-function copyToClipboard(text) {
-    if (window.clipboardData && window.clipboardData.setData) {
-        // Internet Explorer-specific code path to prevent textarea being shown while dialog is visible.
-        return window.clipboardData.setData("Text", text);
-
-    }
-    else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
-        var textarea = document.createElement("textarea");
-        textarea.textContent = text;
-        textarea.style.position = "fixed";  // Prevent scrolling to bottom of page in Microsoft Edge.
-        document.body.appendChild(textarea);
-        textarea.select();
-        textarea.setSelectionRange(0, 99999);
-        try {
-            return document.execCommand("copy");  // Security exception may be thrown by some browsers.
-        }
-        catch (ex) {
-            console.warn("Copy to clipboard failed.", ex);
-            return prompt("Copy to clipboard: Ctrl+C, Enter", text);
-        }
-        finally {
-            document.body.removeChild(textarea);
-        }
-    }
-}
-
 function findGetParameter(parameterName) {
-    var result = null,
-        tmp = [];
+    var tmp = [];
+    var result = null;
     var items = location.search.substr(1).split("&");
+
     for (var index = 0; index < items.length; index++) {
         tmp = items[index].split("=");
         if (tmp[0] === parameterName) result = decodeURIComponent(tmp[1]);
     }
+
     return result;
+}
+
+// ref : https://stackoverflow.com/questions/400212/how-do-i-copy-to-the-clipboard-in-javascript
+function copyToClipboard(text) {
+    if (window.clipboardData && window.clipboardData.setData) {
+        return window.clipboardData.setData("Text", text);
+    }
+    else if (document.queryCommandSupported && document.queryCommandSupported("copy")) {
+        var textarea = document.createElement("textarea");
+        textarea.textContent = text;
+        textarea.style.position = "fixed";
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        try {
+            return document.execCommand("copy");
+        }
+        catch (ex) {
+            console.warn("Copy to clipboard failed.", ex);
+        }
+        finally {
+            document.body.removeChild(textarea);
+        }
+    } else {
+        console.error('Failed to copy data to the clipboard');
+    }
 }
 
 function mobileCheck() {
