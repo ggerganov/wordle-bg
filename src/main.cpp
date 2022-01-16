@@ -1,3 +1,4 @@
+// CMake-generated header containing timestamp of the build
 #include "build_timestamp.h"
 
 #include "imgui-extra/imgui_impl.h"
@@ -28,7 +29,9 @@
 
 #include "imgui-helpers.h"
 
+//
 // Constants
+//
 
 using TColor = uint32_t;
 
@@ -143,7 +146,7 @@ const std::map<TColor, std::string> kGridEmojis = {
 
 namespace {
 
-// poor-man's handling of cyrllic strings:
+// poor-man's handling of cyrillic strings:
 
 // get i'th character from utf-8 string
 std::string utf8_ch(const std::string & str, int i) {
@@ -247,7 +250,9 @@ EMSCRIPTEN_BINDINGS(wordle) {
 
 }
 
+//
 // Core
+//
 
 // common variables used for rendering stuff on the screen
 struct Rendering {
@@ -693,7 +698,7 @@ struct State {
             if (attempts.size() == 4) return "Браво";
             if (attempts.size() == 5) return "Не е зле";
             if (attempts.size() == 6) return "За малко";
-            return "Браво";
+            return "Браво"; // fallback - should never happen
         }
 
         // upon failure -> show the answer
@@ -782,6 +787,8 @@ void initMain() {
             printf("Puzzle ID: %d\n", g_state.puzzleId());
             std::mt19937 rng;
 
+            // this seed determines the sequence of words that will be generated
+            // TODO : avoid having the same puzzle occur in 2 different days
             rng.seed(0);
             rng.discard(g_state.puzzleId());
             g_state.answer = g_state.words[rng()%g_state.words.size()];
@@ -962,7 +969,7 @@ void renderMain() {
 
     ImGui::SetWindowFontScale(1.0f/kFontScale);
 
-    // TODO : support for Help and Settings windows
+    // is any of the popup windows enabled?
     const bool hasPopup =
         g_state.help.showWindow ||
         g_state.statistics.showWindow ||
