@@ -740,7 +740,7 @@ struct State {
     // update the dataClipboard member - to be consumed by the JS layer
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
-        dataClipboard = "Уърдъл " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + "\n\n";
+        dataClipboard = "Уърдъл " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + " 🇧🇬\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
                 switch (grid[y][x].type) {
