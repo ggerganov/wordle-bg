@@ -1725,7 +1725,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     };
 
     g_input = [&](const std::string & input) {
-        if (g_state.isAnimating || g_state.isFinished) return;
+        if ((g_state.isAnimating && (int) ::utf8_size(g_state.attemptCur) == g_state.nLettersPerWord) || g_state.isFinished) return;
 
         auto & cur = g_state.attemptCur;
 
