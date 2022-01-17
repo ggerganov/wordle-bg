@@ -498,7 +498,7 @@ struct State {
     // compute how much time has left for the current puzzle
     // returns a string formatted as hh:mm:ss
     std::string timeLeft(const double T) const {
-        const int64_t t = nextPuzzleTimestamp() - (timestamp + T);
+        const int64_t t = std::max(0.0, nextPuzzleTimestamp() - (timestamp + T));
         const int h = t/3600;
         const int m = (t - h*3600)/60;
         const int s = (t - h*3600 - m*60);
