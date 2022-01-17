@@ -114,26 +114,36 @@
                 }
             }
 
-            function checkForActions(event) {
-                setTimeout(function() {
-                    var dataClipboard = Module.get_clipboard();
-                    if (dataClipboard.length > 0) {
-                        console.log(dataClipboard);
-                        if (!isMobile) {
-                            copyToClipboard(dataClipboard);
-                        } else {
-                            if (navigator.share) {
-                                navigator.share({
-                                                title: document.title,
-                                                text: dataClipboard
-                                                //,url: window.location.href
-                                })
-                                    .then(() => console.log('Successful share'))
-                                    .catch(error => console.log('Error sharing:', error));
-                            }
+            function updateClipboard() {
+                var dataClipboard = Module.get_clipboard();
+                if (dataClipboard.length > 0) {
+                    console.log(dataClipboard);
+                    if (!isMobile) {
+                        copyToClipboard(dataClipboard);
+                    } else {
+                        if (navigator.share) {
+                            navigator.share({
+                                            title: document.title,
+                                            text: dataClipboard
+                                            //,url: window.location.href
+                            })
+                                .then(() => console.log('Successful share'))
+                                .catch(error => console.log('Error sharing:', error));
                         }
                     }
-                }, 250);
+                }
+            }
+
+            function checkForActions(event) {
+                // on Firefox Quantum, need to call this directly, otherwise the following error is reported:
+                // document.execCommand('cut'/'copy') was denied because it was not called from inside a short running user-generated event handler.
+                updateClipboard();
+
+                // on other browsers, need to update the clipboard after a short interval
+                // I guess it has something to do with the ImGui::IsMouseReleased(0) logic - probably need to use the mouse-down event instead ..
+                setTimeout(function() {
+                    updateClipboard();
+                }, 100);
             }
 
             function init() {
