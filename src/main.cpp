@@ -126,12 +126,29 @@ const ImVec4 kColorFade = { float(0x00)/256.0f, float(0x00)/256.0f, float(0x00)/
 const auto kInputEnter     = ICON_FA_CHECK;
 const auto kInputBackspace = ICON_FA_ARROW_LEFT;
 
-// the keyboard layout on the screen
-// TODO : add support for BDS layout
-const std::vector<std::vector<std::string>> kKeyboardPhonetic = {
+// the keyboard layouts on the screen
+enum class EKeyboardType {
+    Phonetic,
+    BDS,
+};
+
+using TKeyboard = std::vector<std::vector<std::string>>;
+
+const TKeyboard kKeyboardBDS = {
+    { "У", "Е", "И", "Ш", "Щ", "К", "С", "Д", "З", "Ц", "Б", },
+    { "ь", "Я", "А", "О", "Ж", "Г", "Т", "Н", "В", "М", "Ч", },
+    { kInputEnter, "Ю", "Й", "Ъ", "Ф", "Х", "П", "Р", "Л", kInputBackspace, },
+};
+
+const TKeyboard kKeyboardPhonetic = {
     { "Я", "В", "Е", "Р", "Т", "Ъ", "У", "И", "О", "П", "Ю", },
     { "А", "С", "Д", "Ф", "Г", "Х", "Й", "К", "Л", "Ш", "Щ", },
     { kInputEnter, "З", "ь", "Ц", "Ж", "Б", "Н", "М", "Ч", kInputBackspace, },
+};
+
+const std::map<EKeyboardType, TKeyboard> kKeyboards = {
+    { EKeyboardType::Phonetic, kKeyboardPhonetic, },
+    { EKeyboardType::BDS,      kKeyboardBDS,      },
 };
 
 // emojis for sharing results
@@ -386,9 +403,16 @@ struct Settings {
     float tShow = -100.0f;
     float tHide = -100.0f;
 
-    EColorTheme curColorTheme = EColorTheme::Light;
-    EColorTheme newColorTheme = curColorTheme;
-    TColorTheme colors = kColorThemes.at(curColorTheme);
+    EKeyboardType keyboardType = EKeyboardType::Phonetic;
+    EKeyboardType keyboardTypeNew = keyboardType;
+    TKeyboard keyboard = kKeyboards.at(keyboardType);
+
+    EColorTheme colorTheme = EColorTheme::Light;
+    EColorTheme colorThemeNew = colorTheme;
+    TColorTheme colors = kColorThemes.at(colorTheme);
+
+    bool rectRounding = true;
+    bool rectRoundingNew = rectRounding;
 
     // is the window currently visible?
     bool visible(float T) const {
@@ -445,7 +469,6 @@ struct State {
     float heightKeyboard = 200.0f;
 
     // keyboard
-    bool isPhonetic = true;
     float keyboardMinX = 0.0f;
     float keyboardMaxX = 0.0f;
     std::map<std::string, Cell::Type> keys;
@@ -707,7 +730,7 @@ struct State {
 
     // update the dataAttempts member - to be consumed by the JS layer
     void updateDataAttempts() {
-        dataAttempts = std::to_string(puzzleId());
+        dataAttempts  = std::to_string(puzzleId());
         dataAttempts += " ";
 
         for (const auto & cur : attempts) {
@@ -720,7 +743,7 @@ struct State {
 
     // update the dataStatistics member - to be consumed by the JS layer
     void updateDataStatistics() {
-        dataStatistics += std::to_string(statistics.nPlayed);
+        dataStatistics  = std::to_string(statistics.nPlayed);
         dataStatistics += " ";
         dataStatistics += std::to_string(statistics.streakCur);
         dataStatistics += " ";
@@ -756,7 +779,11 @@ struct State {
 
     // update the dataSettings member - to be consumed by the JS layer
     void updateDataSettings() {
-        dataSettings = std::to_string((int) settings.curColorTheme);
+        dataSettings  = std::to_string((int) settings.colorTheme);
+        dataSettings += " ";
+        dataSettings += std::to_string((int) settings.rectRounding);
+        dataSettings += " ";
+        dataSettings += std::to_string((int) settings.keyboardType);
     }
 } g_state;
 
@@ -843,7 +870,7 @@ bool renderBox(ImDrawList * drawList, const std::string & text, const ImVec2 & p
         pos.y + 1.0f*textSize.y + kMarginY + (offset.y - (center ? 0.5f : 0.0f))*textSize.y,
     };
 
-    drawList->AddRectFilled(pp0, pp1, col, 2.0f);
+    drawList->AddRectFilled(pp0, pp1, col, g_state.settings.rectRounding ? 2.0f : 0.0f);
 
     return ImGui::IsMouseHoveringRect(pp0, pp1, true) && ImGui::IsMouseReleased(0);
 }
@@ -1110,7 +1137,7 @@ void renderMain() {
 
     // draw keyboard
     {
-        const auto & kKeyboard = ::kKeyboardPhonetic;
+        const auto & kKeyboard = g_state.settings.keyboard;
 
         const float kMargin = std::min(0.005f*wSize.x, 0.02f*g_state.heightKeyboard);
 
@@ -1162,7 +1189,7 @@ void renderMain() {
                 const auto & ch = kKeyboard[y][x];
                 const auto [colFG, colBG] = g_state.colKey(ch, colors);
 
-                drawList->AddRectFilled(p0, p1, colBG, 4.0f);
+                drawList->AddRectFilled(p0, p1, colBG, g_state.settings.rectRounding ? 4.0f : 0.0f);
 
                 renderText(ch, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colFG, 1.0f*(kKeyX/35.0f), true);
 
@@ -1204,8 +1231,8 @@ void renderMain() {
             const float kMarginY = 10.0f;
 
             // window floor
-            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), 8.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), 8.0f, 0, 0.5f);
+            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
 
             {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
@@ -1338,8 +1365,8 @@ void renderMain() {
             const float kMarginY = 30.0f;
 
             // window floor
-            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), 8.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), 8.0f, 0, 0.5f);
+            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
 
             {
                 ImGui::SetWindowFontScale(1.25f/kFontScale);
@@ -1504,8 +1531,8 @@ void renderMain() {
             const float kMarginY = 10.0f;
 
             // window floor
-            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), 8.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), 8.0f, 0, 0.5f);
+            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
 
             {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
@@ -1517,12 +1544,30 @@ void renderMain() {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
                 renderText("НАСТРОЙКИ", { c0.x, ul.y + kMarginY + 2.0f*kRowHeight, }, colors.at(EColor::Text), kFontSize, true);
 
+                if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
+                    ignoreClose = true;
+                    if (g_state.settings.keyboardType == EKeyboardType::Phonetic) {
+                        g_state.settings.keyboardTypeNew = EKeyboardType::BDS;
+                    } else if (g_state.settings.keyboardType == EKeyboardType::BDS) {
+                        g_state.settings.keyboardTypeNew = EKeyboardType::Phonetic;
+                    }
+                }
+
                 if (renderText(ICON_FA_LIGHTBULB, { c0.x, c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
                     ignoreClose = true;
-                    if (g_state.settings.curColorTheme == EColorTheme::Light) {
-                        g_state.settings.newColorTheme = EColorTheme::Dark;
-                    } else if (g_state.settings.curColorTheme == EColorTheme::Dark) {
-                        g_state.settings.newColorTheme = EColorTheme::Light;
+                    if (g_state.settings.colorTheme == EColorTheme::Light) {
+                        g_state.settings.colorThemeNew = EColorTheme::Dark;
+                    } else if (g_state.settings.colorTheme == EColorTheme::Dark) {
+                        g_state.settings.colorThemeNew = EColorTheme::Light;
+                    }
+                }
+
+                if (renderText(g_state.settings.rectRounding ? ICON_FA_STOP : ICON_FA_SQUARE, { 0.5f*(c0.x + lr.x), c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
+                    ignoreClose = true;
+                    if (g_state.settings.rectRounding == false) {
+                        g_state.settings.rectRoundingNew = true;
+                    } else if (g_state.settings.rectRounding == true) {
+                        g_state.settings.rectRoundingNew = false;
                     }
                 }
 
@@ -1569,9 +1614,20 @@ void updatePre() {
 
     g_state.update(T, false);
 
-    if (g_state.settings.curColorTheme != g_state.settings.newColorTheme) {
-        g_state.settings.colors = kColorThemes.at(g_state.settings.newColorTheme);
-        g_state.settings.curColorTheme = g_state.settings.newColorTheme;
+    if (g_state.settings.keyboardType != g_state.settings.keyboardTypeNew) {
+        g_state.settings.keyboard = kKeyboards.at(g_state.settings.keyboardTypeNew);
+        g_state.settings.keyboardType = g_state.settings.keyboardTypeNew;
+        g_state.updateDataSettings();
+    }
+
+    if (g_state.settings.colorTheme != g_state.settings.colorThemeNew) {
+        g_state.settings.colors = kColorThemes.at(g_state.settings.colorThemeNew);
+        g_state.settings.colorTheme = g_state.settings.colorThemeNew;
+        g_state.updateDataSettings();
+    }
+
+    if (g_state.settings.rectRounding != g_state.settings.rectRoundingNew) {
+        g_state.settings.rectRounding = g_state.settings.rectRoundingNew;
         g_state.updateDataSettings();
     }
 }
@@ -1809,9 +1865,27 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
         std::stringstream ss(data);
 
         {
-            int tmp;
+            int tmp = -1;
             ss >> tmp;
-            g_state.settings.newColorTheme = (EColorTheme) tmp;
+            if (tmp != -1) {
+                g_state.settings.colorThemeNew = (EColorTheme) tmp;
+            }
+        }
+
+        {
+            int tmp = -1;
+            ss >> tmp;
+            if (tmp != -1) {
+                g_state.settings.rectRoundingNew = tmp;
+            }
+        }
+
+        {
+            int tmp = -1;
+            ss >> tmp;
+            if (tmp != -1) {
+                g_state.settings.keyboardTypeNew = (EKeyboardType) tmp;
+            }
         }
     };
 
