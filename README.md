@@ -24,6 +24,7 @@ mkdir build && cd build
 cmake ..
 make -j
 ln -sfn ../fonts/* ./
+ln -sfn ../words/* ./
 ./bin/wordle
 ```
 

@@ -35,8 +35,9 @@
 
 using TColor = uint32_t;
 
-const auto kTitle     = "УЪРДЪЛ";
-const auto kFontScale = 3.0f;
+const auto kTitle          = "УЪРДЪЛ";
+const auto kTitleClipboard = "Уърдъл";
+const auto kFontScale      = 3.0f;
 
 // animation time in seconds
 const float kTimeFlip       = 0.35f; // cell flip on submit
@@ -860,7 +861,7 @@ struct State {
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
         const std::string special = (isGuessed && isHardMode()) ? "*" : "";
-        dataClipboard = "Уърдъл " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
+        dataClipboard = kTitleClipboard + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
                 switch (grid[y][x].type) {
