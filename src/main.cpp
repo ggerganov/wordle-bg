@@ -17,6 +17,7 @@
 #include <functional>
 #include <map>
 #include <random>
+#include <set>
 #include <sstream>
 #include <vector>
 
@@ -125,6 +126,10 @@ const ImVec4 kColorFade = { float(0x00)/256.0f, float(0x00)/256.0f, float(0x00)/
 // special keys
 const auto kInputEnter     = ICON_FA_CHECK;
 const auto kInputBackspace = ICON_FA_ARROW_LEFT;
+
+const std::vector<std::string> kAlphabet = {
+    "А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "Й", "К", "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ъ", "Ь", "Ю", "Я",
+};
 
 // the keyboard layouts on the screen
 enum class EKeyboardType {
@@ -553,6 +558,92 @@ struct State {
         return { colors.at(EColor::Text), colors.at(EColor::KeyboardUnused), };
     }
 
+    // do the attempts so for satisfy the Hard Mode rule?
+    bool isHardMode() {
+        struct Limit {
+            int lower; // known minimum number of occurances of the letter
+            int upper; // known maximum number of occurances of the letter
+
+            // the letter cannot be in the following positions:
+            std::vector<bool> np;
+        };
+
+        // initialize the known limits for each letter
+        std::map<std::string, Limit> limits;
+        for (auto ch : kAlphabet) {
+            limits[ch] = { 0, nLettersPerWord, std::vector<bool>(nLettersPerWord, false) };
+        }
+
+        const int nAttempts = attempts.size();
+        for (int y = 0; y < nAttempts; ++y) {
+            if (y > 0) {
+                for (int x = 0; x < nLettersPerWord; ++x) {
+                    // once correctly guess, the letter should remain correct for the rest of the attempts
+                    if (grid[y-1][x].type == Cell::Correct && grid[y][x].type != Cell::Correct) {
+                        return false;
+                    }
+                }
+            }
+
+            for (int x = 0; x < nLettersPerWord; ++x) {
+                // check if we known that the letter ch cannot be at position x
+                if (limits[grid[y][x].data].np[x]) {
+                    return false;
+                }
+
+                if (grid[y][x].type != Cell::Correct) {
+                    limits[grid[y][x].data].np[x] = true;
+                }
+            }
+
+            std::map<std::string, std::pair<int, int>> cnt;
+
+            // count how many times the letter occurs in current attempt
+            // also, count the number of times the letter was marked as Present or Correct (i.e. non-Absent)
+            for (int x = 0; x < nLettersPerWord; ++x) {
+                const auto & ch = grid[y][x].data;
+
+                auto & nInput = cnt[ch].first;
+                auto & nNonAbsent = cnt[ch].second;
+
+                nInput++;
+                if (grid[y][x].type != Cell::Absent) nNonAbsent++;
+            }
+
+            // limits check - each letter in the new attempt must be within the currently known limits
+            for (const auto & [ch, c] : cnt) {
+                const auto & nInput = c.first;
+                if (nInput < limits[ch].lower || nInput > limits[ch].upper) {
+                    return false;
+                }
+            }
+
+            // if we know a letter is present in the answer, it must be played in the new attempt
+            for (const auto & [ch, limit] : limits) {
+                if (limit.lower > 0 && cnt.find(ch) == cnt.end()) {
+                    return false;
+                }
+            }
+
+            // update the limits based on the current attempt results
+            for (const auto & [ch, c] : cnt) {
+                const auto & nInput = c.first;
+                const auto & nNonAbsent = c.second;
+
+                // update the lower limit for the occurances of ch
+                limits[ch].lower = nNonAbsent;
+
+                // we know an upper limit for the occurances of ch
+                // for example: input contains ch 2 times and only one is Correct or Present => there is only one ch in the answer
+                if (nInput > nNonAbsent) {
+                    limits[ch].upper = nNonAbsent;
+                }
+            }
+        }
+
+        return true;
+    }
+
     // update the state of the game:
     //   - grid cell colors
     //   - keyboard colors
@@ -763,7 +854,8 @@ struct State {
     // update the dataClipboard member - to be consumed by the JS layer
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
-        dataClipboard = "Уърдъл " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + " 🇧🇬\n\n";
+        const std::string special = (isGuessed && isHardMode()) ? "*" : "";
+        dataClipboard = "Уърдъл " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
                 switch (grid[y][x].type) {
