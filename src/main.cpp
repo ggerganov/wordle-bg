@@ -36,7 +36,7 @@
 using TColor = uint32_t;
 
 const auto kTitle     = "УЪРДЪЛ";
-const auto kFontScale = 4.00f;
+const auto kFontScale = 3.0f;
 
 // animation time in seconds
 const float kTimeFlip       = 0.35f; // cell flip on submit
@@ -1807,15 +1807,23 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
         static const ImWchar rangesFAB[] = { ICON_MIN_FAB, ICON_MAX_FAB, 0, };
         static const ImWchar * rangesCyr = ImGui::GetIO().Fonts->GetGlyphRangesCyrillic();
 
+        static ImFontConfig configBase;
+        configBase.PixelSnapH = true;
+        configBase.OversampleH = 3;
+        configBase.OversampleV = 1;
+
         static ImFontConfig configMerge;
         configMerge.MergeMode = true;
         configMerge.GlyphOffset = { 0.0f, 0.0f };
+        configMerge.PixelSnapH = true;
+        configMerge.OversampleH = 3;
+        configMerge.OversampleV = 1;
 
-        ImGui_tryLoadFont("Arimo-Bold.ttf",          14.0f*kFontScale, NULL,         rangesCyr);
+        ImGui_tryLoadFont("Arimo-Bold.ttf",          14.0f*kFontScale, &configBase,  rangesCyr);
         ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAR,   14.0f*kFontScale, &configMerge, rangesFAR);
         ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAS,   14.0f*kFontScale, &configMerge, rangesFAS);
         ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAB,   14.0f*kFontScale, &configMerge, rangesFAB);
-        ImGui_tryLoadFont("Arimo-Regular.ttf",       14.0f*kFontScale, NULL,         rangesCyr);
+        ImGui_tryLoadFont("Arimo-Regular.ttf",       14.0f*kFontScale, &configBase,  rangesCyr);
     }
 
     ImGui_BeginFrame(window);
