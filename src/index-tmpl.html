@@ -143,6 +143,12 @@
                 // I guess it has something to do with the ImGui::IsMouseReleased(0) logic - probably need to use the mouse-down event instead ..
                 setTimeout(function() {
                     updateClipboard();
+
+                    // check if the app requested to open a URL
+                    var dataURL = Module.get_url();
+                    if (dataURL.length > 0) {
+                        window.open(dataURL, '_blank').focus();
+                    }
                 }, 100);
             }
 

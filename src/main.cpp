@@ -243,6 +243,10 @@ std::function<std::string()> g_getSettings;
 // returns a string with emojies representing the player's attempts to guess the word
 std::function<std::string()> g_getClipboard;
 
+// called from JS to check if an URL has been clicked
+// returns a string with the URL address
+std::function<std::string()> g_getURL;
+
 // set the initial timestamp at which the game was started
 std::function<void(int64_t)> g_setTimestamp;
 
@@ -265,6 +269,7 @@ EMSCRIPTEN_BINDINGS(wordle) {
     emscripten::function("set_settings",    emscripten::optional_override([](const std::string & input) { g_setSettings(input); }));
     emscripten::function("get_settings",    emscripten::optional_override([]() -> std::string           { return g_getSettings(); }));
     emscripten::function("get_clipboard",   emscripten::optional_override([]() -> std::string           { return g_getClipboard(); }));
+    emscripten::function("get_url",         emscripten::optional_override([]() -> std::string           { return g_getURL(); }));
     emscripten::function("set_timestamp",   emscripten::optional_override([](double input)              { g_setTimestamp(input); }));
 }
 #endif
@@ -482,6 +487,7 @@ struct State {
     std::string dataStatistics;
     std::string dataClipboard;
     std::string dataSettings;
+    std::string dataURL;
 
     //
     // helper methods
@@ -1618,7 +1624,7 @@ void renderMain() {
             };
 
             // leave some empty space near the window border
-            const float kMarginX = 20.0f;
+            //const float kMarginX = 20.0f;
             const float kMarginY = 10.0f;
 
             // window floor
@@ -1632,9 +1638,9 @@ void renderMain() {
                 const float kRowHeight = ImGui::CalcTextSize("A").y;
 
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                renderText("НАСТРОЙКИ", { c0.x, ul.y + kMarginY + 2.0f*kRowHeight, }, colors.at(EColor::Text), kFontSize, true);
+                renderText("НАСТРОЙКИ", { c0.x, ul.y + kMarginY + 4.0f*kRowHeight, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
 
-                if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
+                if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
                     ignoreClose = true;
                     if (g_state.settings.keyboardType == EKeyboardType::Phonetic) {
                         g_state.settings.keyboardTypeNew = EKeyboardType::BDS;
@@ -1643,7 +1649,7 @@ void renderMain() {
                     }
                 }
 
-                if (renderText(ICON_FA_LIGHTBULB, { c0.x, c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
+                if (renderText(ICON_FA_LIGHTBULB, { c0.x, ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
                     ignoreClose = true;
                     if (g_state.settings.colorTheme == EColorTheme::Light) {
                         g_state.settings.colorThemeNew = EColorTheme::Dark;
@@ -1652,13 +1658,30 @@ void renderMain() {
                     }
                 }
 
-                if (renderBox(drawList, " ", { 0.5f*(c0.x + lr.x), c0.y, }, colors.at(EColor::Text), 1.50f, true, { 0.0f, 0.0f, }, g_state.settings.rectRounding ? 0.0f : 8.0f)) {
+                if (renderBox(drawList, " ", { 0.5f*(c0.x + lr.x), ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true, { 0.0f, 0.0f, }, g_state.settings.rectRounding ? 0.0f : 8.0f)) {
                     ignoreClose = true;
                     if (g_state.settings.rectRounding == false) {
                         g_state.settings.rectRoundingNew = true;
                     } else if (g_state.settings.rectRounding == true) {
                         g_state.settings.rectRoundingNew = false;
                     }
+                }
+
+                renderText("КОНТАКТИ", { c0.x, ul.y + kMarginY + 14.0f*kRowHeight, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
+
+                if (renderText(ICON_FA_ENVELOPE, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
+                    ignoreClose = true;
+                    g_state.dataURL = "mailto:ggerganov@gmail.com?subject=Feedback (wordle-bg)";
+                }
+
+                if (renderText(ICON_FA_TWITTER, { c0.x, ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
+                    ignoreClose = true;
+                    g_state.dataURL = "https://twitter.com/ggerganov";
+                }
+
+                if (renderText(ICON_FA_GITHUB, { 0.5f*(c0.x + lr.x), ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
+                    ignoreClose = true;
+                    g_state.dataURL = "https://github.com/ggerganov/wordle-bg";
                 }
 
                 {
@@ -2013,6 +2036,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     g_getClipboard = [&]() {
         auto res = g_state.dataClipboard;
         g_state.dataClipboard.clear();
+        return res;
+    };
+
+    g_getURL = [&]() {
+        auto res = g_state.dataURL;
+        g_state.dataURL.clear();
         return res;
     };
 
