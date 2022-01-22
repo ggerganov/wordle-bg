@@ -1627,7 +1627,6 @@ void renderMain() {
 
             {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
-                ImGui::PushTextWrapPos(lr.x - kMarginX);
 
                 ImGui::SetWindowFontScale(kFontSize/kFontScale);
                 const float kRowHeight = ImGui::CalcTextSize("A").y;
@@ -1662,9 +1661,13 @@ void renderMain() {
                     }
                 }
 
+                {
+                    const std::string puzzleId = std::string("#") + std::to_string(g_state.puzzleId());
+                    renderText(puzzleId, { lr.x, lr.y, }, colors.at(EColor::PendingBorder), 1.0f, true, { -1.20f, -1.10f, });
+                }
+
                 ImGui::PopFont();
 
-                ImGui::PopTextWrapPos();
                 ImGui::PopFont();
             }
         }
