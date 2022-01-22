@@ -1,6 +1,6 @@
 // ImGui helpers
 
-bool ImGui_tryLoadFont(const std::string & filename, float size = 14.0f, bool merge = false, bool cyrillic = false) {
+bool ImGui_tryLoadFont(const std::string & filename, float size = 14.0f, ImFontConfig * config = NULL, const ImWchar * ranges = NULL) {
 #ifndef __EMSCRIPTEN__
     printf("Trying to load font from '%s' ..\n", filename.c_str());
 #endif
@@ -11,21 +11,15 @@ bool ImGui_tryLoadFont(const std::string & filename, float size = 14.0f, bool me
 #endif
         return false;
     }
+
+    if (ImGui::GetIO().Fonts->AddFontFromFileTTF(filename.c_str(), size, config, ranges) == NULL) {
+        return false;
+    }
+
 #ifndef __EMSCRIPTEN__
     printf(" - success\n");
 #endif
-    if (merge) {
-        // todo : ugly static !!!
-        static ImWchar ranges[] =  { 0xf000, 0xf3ff, 0 };
-        static ImFontConfig config;
 
-        config.MergeMode = merge;
-        config.GlyphOffset = { 0.0f, 0.0f };
-
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(filename.c_str(), size, &config, cyrillic ? ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() : ranges);
-    } else {
-        ImGui::GetIO().Fonts->AddFontFromFileTTF(filename.c_str(), size, NULL, cyrillic ? ImGui::GetIO().Fonts->GetGlyphRangesCyrillic() : NULL);
-    }
     return true;
 }
 

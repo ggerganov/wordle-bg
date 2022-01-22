@@ -4,9 +4,8 @@
 #include "imgui-extra/imgui_impl.h"
 #include "imgui/imgui_internal.h"
 
-#ifndef ICON_FA_COGS
-#include "icons_font_awesome.h"
-#endif
+#include "IconsFontAwesome5.h"
+#include "IconsFontAwesome5Brands.h"
 
 #include <SDL.h>
 #include <SDL_opengl.h>
@@ -125,7 +124,7 @@ const ImVec4 kColorFade = { float(0x00)/256.0f, float(0x00)/256.0f, float(0x00)/
 
 // special keys
 const auto kInputEnter     = ICON_FA_CHECK;
-const auto kInputBackspace = ICON_FA_ARROW_LEFT;
+const auto kInputBackspace = ICON_FA_BACKSPACE;
 
 const std::vector<std::string> kAlphabet = {
     "А", "Б", "В", "Г", "Д", "Е", "Ж", "З", "И", "Й", "К", "Л", "М", "Н", "О", "П", "Р", "С", "Т", "У", "Ф", "Х", "Ц", "Ч", "Ш", "Щ", "Ъ", "Ь", "Ю", "Я",
@@ -558,7 +557,7 @@ struct State {
         return { colors.at(EColor::Text), colors.at(EColor::KeyboardUnused), };
     }
 
-    // do the attempts so for satisfy the Hard Mode rule?
+    // do the attempts so far satisfy the Hard Mode rules?
     bool isHardMode() {
         struct Limit {
             int lower; // known minimum number of occurances of the letter
@@ -944,7 +943,7 @@ void initMain() {
 }
 
 // return true if the box has been clicked
-bool renderBox(ImDrawList * drawList, const std::string & text, const ImVec2 & pos, TColor col, float scale, bool center, const ImVec2 & offset = { 0.0f, 0.0f }) {
+bool renderBox(ImDrawList * drawList, const std::string & text, const ImVec2 & pos, TColor col, float scale, bool center, const ImVec2 & offset = { 0.0f, 0.0f }, float rounding = -1.0f) {
     ImGui::SetWindowFontScale(scale/kFontScale);
 
     const ImVec2 textSize = ImGui::CalcTextSize(text.c_str());
@@ -962,7 +961,7 @@ bool renderBox(ImDrawList * drawList, const std::string & text, const ImVec2 & p
         pos.y + 1.0f*textSize.y + kMarginY + (offset.y - (center ? 0.5f : 0.0f))*textSize.y,
     };
 
-    drawList->AddRectFilled(pp0, pp1, col, g_state.settings.rectRounding ? 2.0f : 0.0f);
+    drawList->AddRectFilled(pp0, pp1, col, rounding >= 0.0 ? rounding : g_state.settings.rectRounding ? 2.0f : 0.0f);
 
     return ImGui::IsMouseHoveringRect(pp0, pp1, true) && ImGui::IsMouseReleased(0);
 }
@@ -1114,7 +1113,7 @@ void renderMain() {
         }
 
         // draw statistics button
-        if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -1.95f, 0.0f }) && hasPopup == false) {
+        if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && hasPopup == false) {
             if (g_state.statistics.showWindow == false) {
                 g_state.statistics.showWindow = true;
                 g_state.statistics.tShow = T;
@@ -1324,7 +1323,7 @@ void renderMain() {
 
             // window floor
             drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 1.0f);
 
             {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
@@ -1458,7 +1457,7 @@ void renderMain() {
 
             // window floor
             drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 1.0f);
 
             {
                 ImGui::SetWindowFontScale(1.25f/kFontScale);
@@ -1624,7 +1623,7 @@ void renderMain() {
 
             // window floor
             drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
-            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 0.5f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 1.0f);
 
             {
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
@@ -1654,7 +1653,7 @@ void renderMain() {
                     }
                 }
 
-                if (renderText(g_state.settings.rectRounding ? ICON_FA_STOP : ICON_FA_SQUARE, { 0.5f*(c0.x + lr.x), c0.y, }, colors.at(EColor::Text), 3.00f, true)) {
+                if (renderBox(drawList, " ", { 0.5f*(c0.x + lr.x), c0.y, }, colors.at(EColor::Text), 1.50f, true, { 0.0f, 0.0f, }, g_state.settings.rectRounding ? 0.0f : 8.0f)) {
                     ignoreClose = true;
                     if (g_state.settings.rectRounding == false) {
                         g_state.settings.rectRoundingNew = true;
@@ -1802,9 +1801,22 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
         ImGui::GetIO().Fonts->AddFontDefault(&cfg);
     }
 
-    ImGui_tryLoadFont("Arimo-Bold.ttf",          14.0f*kFontScale, false, true);
-    ImGui_tryLoadFont("fontawesome-webfont.ttf", 14.0f*kFontScale, true, false);
-    ImGui_tryLoadFont("Arimo-Regular.ttf",       14.0f*kFontScale, false, true);
+    {
+        static const ImWchar rangesFAR[] = { ICON_MIN_FA,  ICON_MAX_FA,  0, };
+        static const ImWchar rangesFAS[] = { ICON_MIN_FA,  ICON_MAX_FA,  0, };
+        static const ImWchar rangesFAB[] = { ICON_MIN_FAB, ICON_MAX_FAB, 0, };
+        static const ImWchar * rangesCyr = ImGui::GetIO().Fonts->GetGlyphRangesCyrillic();
+
+        static ImFontConfig configMerge;
+        configMerge.MergeMode = true;
+        configMerge.GlyphOffset = { 0.0f, 0.0f };
+
+        ImGui_tryLoadFont("Arimo-Bold.ttf",          14.0f*kFontScale, NULL,         rangesCyr);
+        ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAR,   14.0f*kFontScale, &configMerge, rangesFAR);
+        ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAS,   14.0f*kFontScale, &configMerge, rangesFAS);
+        ImGui_tryLoadFont(FONT_ICON_FILE_NAME_FAB,   14.0f*kFontScale, &configMerge, rangesFAB);
+        ImGui_tryLoadFont("Arimo-Regular.ttf",       14.0f*kFontScale, NULL,         rangesCyr);
+    }
 
     ImGui_BeginFrame(window);
     ImGui::NewFrame();
