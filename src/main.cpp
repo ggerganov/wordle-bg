@@ -15,8 +15,6 @@
 #include <fstream>
 #include <functional>
 #include <map>
-#include <random>
-#include <set>
 #include <sstream>
 #include <vector>
 
@@ -907,17 +905,33 @@ void initMain() {
         while (fin >> word) {
             g_state.words.push_back(std::move(word));
         }
+    }
 
-        // select random word based on the current puzzleId
-        {
-            printf("Puzzle ID: %d\n", g_state.puzzleId());
-            std::mt19937 rng;
+    // load daily pool set - puzzle answers are selected only from this set
+    {
+        std::ifstream fin;
+        fin.open("words-daily-pool.txt");
+        if (!fin.is_open()) {
+            fprintf(stderr, "Failed to load dictionary from '%s'\n", "words-daily-pool.txt. Will select a random word..");
 
-            // this seed determines the sequence of words that will be generated
-            // TODO : avoid having the same puzzle occur in 2 different days
-            rng.seed(0);
-            rng.discard(g_state.puzzleId());
-            g_state.answer = g_state.words[rng()%g_state.words.size()];
+            srand(0);
+            g_state.answer = g_state.words[rand()%g_state.words.size()];
+        } else {
+            std::vector<std::string> wordsDailyPool;
+
+            std::string word;
+            while (fin >> word) {
+                wordsDailyPool.push_back(std::move(word));
+            }
+
+            // select random word based on the current puzzleId
+            {
+                const auto puzzleId = std::max(0, g_state.puzzleId());
+                printf("Puzzle ID: %d\n", puzzleId);
+
+                // the daily pool list is already randomized:
+                g_state.answer = wordsDailyPool[puzzleId%wordsDailyPool.size()];
+            }
         }
     }
 

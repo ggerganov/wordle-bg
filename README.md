@@ -13,7 +13,8 @@ This clone is written in C++ and ported to the Web with Emscripten. The bulk of 
 
 I've tried to keep the look and feel as close as possible to the original, although there are certain things that do not behave the same. For example, the smooth fade-in and fade-out of the window popups was too complicated to implement, so I opted out for a simpler approach.
 
-The current [dictionary](words/words.txt) contains 6474 words. Derivative forms are not included (e.g. "бягам" is allowed, but not "бягал", "бягащ").
+The current [dictionary](words/words.txt) contains 14051 words.
+The daily wordle is selected from a smaller, secret pool of words.
 
 ## Build as native app
 

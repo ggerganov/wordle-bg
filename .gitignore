@@ -3,3 +3,5 @@ build/
 build-em/
 
 compile_commands.json
+
+words/words-daily-pool.txt
