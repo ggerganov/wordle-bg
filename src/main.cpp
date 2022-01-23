@@ -34,7 +34,8 @@
 using TColor = uint32_t;
 
 const auto kTitle          = "УЪРДЪЛ";
-const auto kTitleClipboard = "Уърдъл";
+const auto kTitleClipboard = "Уърдъл 🇧🇬";
+const auto kURL            = "wordle-bg.ggerganov.com";
 const auto kFontScale      = 3.0f;
 
 // animation time in seconds
@@ -860,7 +861,7 @@ struct State {
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
         const std::string special = (isGuessed && isHardMode()) ? "*" : "";
-        dataClipboard = std::string(kTitleClipboard) + " " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
+        dataClipboard = std::string(kTitleClipboard) + " " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + "\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
                 switch (grid[y][x].type) {
@@ -872,6 +873,9 @@ struct State {
             }
             dataClipboard += "\n";
         }
+        dataClipboard += "\n";
+        dataClipboard += kURL;
+        dataClipboard += "\n";
     }
 
     // update the dataSettings member - to be consumed by the JS layer
