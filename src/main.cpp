@@ -412,6 +412,7 @@ struct Settings {
     // used for fade animations
     float tShow = -100.0f;
     float tHide = -100.0f;
+    float tKeyboardSwitched = -100.0f;
 
     EKeyboardType keyboardType = EKeyboardType::Phonetic;
     EKeyboardType keyboardTypeNew = keyboardType;
@@ -1291,6 +1292,17 @@ void renderMain() {
 
                 renderText(ch, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colFG, 1.0f*(kKeyX/35.0f), true);
 
+                // fade-in animation when switching the keyboard layout
+                {
+                    const auto tHighlight = ::I(T - g_state.settings.tKeyboardSwitched, kTimeShow);
+                    g_state.animation(tHighlight);
+
+                    if (tHighlight < 1.0f) {
+                        const auto col = ImGui::ColorConvertU32ToFloat4(colors.at(EColor::Background));
+                        drawList->AddRectFilled(p0, p1, ImGui::ColorConvertFloat4ToU32({ col.x, col.y, col.z, (1.0f - tHighlight)*kColorFade.w }));
+                    }
+                }
+
                 if (ImGui::IsMouseHoveringRect(p0, p1, true) && ImGui::IsMouseReleased(0)) {
                     g_input(ch);
                 }
@@ -1643,6 +1655,7 @@ void renderMain() {
 
                 if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
                     ignoreClose = true;
+                    g_state.settings.tKeyboardSwitched = T;
                     if (g_state.settings.keyboardType == EKeyboardType::Phonetic) {
                         g_state.settings.keyboardTypeNew = EKeyboardType::BDS;
                     } else if (g_state.settings.keyboardType == EKeyboardType::BDS) {
