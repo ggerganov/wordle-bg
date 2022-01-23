@@ -860,7 +860,7 @@ struct State {
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
         const std::string special = (isGuessed && isHardMode()) ? "*" : "";
-        dataClipboard = kTitleClipboard + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
+        dataClipboard = std::string(kTitleClipboard) + " " + std::to_string(puzzleId()) + " " + std::to_string(n) + "/" + std::to_string(nAttemptsTotal) + special + " 🇧🇬\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
                 switch (grid[y][x].type) {
