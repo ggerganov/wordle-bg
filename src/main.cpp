@@ -1753,36 +1753,76 @@ void updatePre() {
 // called after rendering each frame
 void updatePost() {
     // handle keyboard presses
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("А");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Б");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("В");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Г");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("Д");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Ж");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("З");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("И");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Й");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("К");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("Л");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("М");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Н");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("О");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("П");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("Р");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("С");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Т");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("У");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("Ф");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Х");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ц");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE))        g_input("Ч");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ш");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHTBRACKET)) g_input("Щ");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Ъ");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("ь");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSLASH))    g_input("Ю");
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("Я");
+    switch (g_state.settings.keyboardType) {
+        case EKeyboardType::Phonetic:
+            {
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("А");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Б");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ц");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("Д");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("Ф");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Г");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Х");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("И");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Й");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("К");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("Л");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("М");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Н");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("О");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("П");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("Я");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("Р");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("С");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Т");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("У");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Ж");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("В");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("ь");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Ъ");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("З");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE))        g_input("Ч");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSLASH))    g_input("Ю");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ш");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHTBRACKET)) g_input("Щ");
+            } break;
+        case EKeyboardType::BDS:
+            {
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("ь");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Ф");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ъ");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("А");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("О");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Ж");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Г");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("С");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Т");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("Н");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("В");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("П");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Х");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("Д");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("З");
+                //if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("ы");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("И");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("Я");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Ш");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("К");
+                //if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Э");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("У");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Й");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Щ");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("Ю");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_SEMICOLON))    g_input("М");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_APOSTROPHE))   g_input("Ч");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ц");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_COMMA))        g_input("Р");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_PERIOD))       g_input("Л");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_SLASH))        g_input("Б");
+            } break;
+    }
     if (ImGui::IsKeyPressed(SDL_SCANCODE_RETURN))       g_input(kInputEnter);
     if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE))    g_input(kInputBackspace);
 }
