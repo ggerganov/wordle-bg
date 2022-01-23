@@ -18,6 +18,10 @@ The current [dictionary](words/words.txt) contains 6474 words. Derivative forms 
 ## Build as native app
 
 ```
+# install dependencies
+sudo apt-get install libsdl2-dev
+
+# build from source
 git clone --recursive https://github.com/ggerganov/wordle-bg
 cd wordle-bg
 mkdir build && cd build
