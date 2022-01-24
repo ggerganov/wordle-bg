@@ -153,8 +153,9 @@
 
             function doInit() {
                 if (isInitialized == false) {
-                    var puzzleIdOffset = findGetParameter('p') || 0;
-                    Module.set_timestamp((new Date().getTime()/1000) + 24*3600*puzzleIdOffset);
+                    //var puzzleIdOffset = findGetParameter('p') || 0;
+                    //Module.set_timestamp((new Date().getTime()/1000) + 24*3600*puzzleIdOffset);
+                    Module.set_timestamp((new Date().getTime()/1000));
 
                     if (localStorage.getItem('attempts') !== null) {
                         Module.set_attempts(localStorage.attempts);
