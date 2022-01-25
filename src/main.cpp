@@ -1921,14 +1921,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
 
         static ImFontConfig configBase;
         configBase.PixelSnapH = true;
-        configBase.OversampleH = 3;
+        configBase.OversampleH = 1;
         configBase.OversampleV = 1;
 
         static ImFontConfig configMerge;
         configMerge.MergeMode = true;
         configMerge.GlyphOffset = { 0.0f, 0.0f };
         configMerge.PixelSnapH = true;
-        configMerge.OversampleH = 3;
+        configMerge.OversampleH = 1;
         configMerge.OversampleV = 1;
 
         ImGui_tryLoadFont("Arimo-Bold.ttf",          14.0f*kFontScale, &configBase,  rangesCyr);
