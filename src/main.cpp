@@ -40,6 +40,7 @@ const auto kFontScale      = 3.0f;
 
 // animation time in seconds
 const float kTimeFlip       = 0.35f; // cell flip on submit
+const float kTimeFill       = 0.50f; // cell flip on submit
 const float kTimeBump       = 0.10f; // cell bump on key press
 const float kTimeShake      = 0.50f; // cell shake on incorrect input
 const float kTimeShow       = 0.20f; // time to show popup window
@@ -992,6 +993,11 @@ bool renderBox(ImDrawList * drawList, const std::string & text, const ImVec2 & p
     return ImGui::IsMouseHoveringRect(pp0, pp1, true) && ImGui::IsMouseReleased(0);
 }
 
+ImU32 fade(const ImU32 & c32, float f) {
+    const auto c4 = ImGui::ColorConvertU32ToFloat4(c32);
+    return ImGui::ColorConvertFloat4ToU32({ c4.x, c4.y, c4.z, f*c4.w, });
+}
+
 // return true if the text has been clicked
 bool renderText(const std::string & text, const ImVec2 & pos, TColor col, float scale, bool center, const ImVec2 & offset = { 0.0f, 0.0f }) {
     ImGui::SetWindowFontScale(scale/kFontScale);
@@ -1041,10 +1047,13 @@ void renderWord(ImDrawList * drawList, const std::vector<Cell> & word, ImVec2 ul
         };
 
         const float iFlip = curCell.submitted() ? ::I(T - curCell.tSubmit, kTimeFlip) : 0.0f;
+        const float iFill = curCell.submitted() ? ::I(T - curCell.tSubmit, kTimeFill) : 0.0f;
 
         g_state.animation(iFlip);
+        g_state.animation(iFill);
 
         const float tFlip = std::max(0.0f, std::min(1.0f, 1.0f - std::fabs(2.0f*(iFlip - 0.5f))));
+        const float tFill = std::max(0.0f, std::min(1.0f, 1.0f - std::fabs(2.0f*(iFill - 0.5f))));
 
         const float hFlip = 0.5f*tFlip*(p1.y - p0.y);
 
@@ -1053,8 +1062,8 @@ void renderWord(ImDrawList * drawList, const std::vector<Cell> & word, ImVec2 ul
 
         const auto [colFill, colBorder] = curCell.col(iFlip, colors);
 
-        drawList->AddRectFilled(pp0, pp1, colFill);
-        drawList->AddRect      (pp0, pp1, colBorder, 0.0f, 0, 2.0f);
+        drawList->AddRectFilled(pp0, pp1, fade(colFill,   (1.0f - tFill)));
+        drawList->AddRect      (pp0, pp1, fade(colBorder, (1.0f - tFill)), 0.0f, 0, 2.0f);
 
         ImGui::PushClipRect( pp0, pp1, true);
 
@@ -1213,12 +1222,15 @@ void renderMain() {
                 };
 
                 const float iFlip = curCell.submitted() ? ::I(T - curCell.tSubmit, kTimeFlip) : 0.0f;
+                const float iFill = curCell.submitted() ? ::I(T - curCell.tSubmit, kTimeFill) : 0.0f;
                 const float iBump = curCell.pending()   ? ::I(T - curCell.tSubmit, kTimeBump) : 0.0f;
 
                 g_state.animation(iFlip);
+                g_state.animation(iFill);
                 g_state.animation(iBump);
 
                 const float tFlip = std::max(0.0f, std::min(1.0f, 1.0f - std::fabs(2.0f*(iFlip - 0.5f))));
+                const float tFill = std::max(0.0f, std::min(1.0f, 1.0f - std::fabs(2.0f*(iFill - 0.5f))));
                 const float tBump = std::max(0.0f, std::min(1.0f, 1.0f - std::fabs(2.0f*(iBump - 0.5f))));
 
                 const float hFlip = 0.5f*tFlip*(p1.y - p0.y);
@@ -1229,8 +1241,8 @@ void renderMain() {
 
                 const auto [colFill, colBorder] = curCell.col(iFlip, colors);
 
-                drawList->AddRectFilled(pp0, pp1, colFill);
-                drawList->AddRect      (pp0, pp1, colBorder, 0.0f, 0, 2.0f);
+                drawList->AddRectFilled(pp0, pp1, fade(colFill,   (1.0f - tFill)));
+                drawList->AddRect      (pp0, pp1, fade(colBorder, (1.0f - tFill)), 0.0f, 0, 2.0f);
 
                 ImGui::PushClipRect( pp0, pp1, true);
 
