@@ -893,7 +893,7 @@ void initMain() {
     const float T = ImGui::GetTime();
 
 #ifndef __EMSCRIPTEN__
-    g_state.timestamp = kTimestamp0;
+    g_state.timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 #endif
 
     // load word list
