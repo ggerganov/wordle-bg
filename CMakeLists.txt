@@ -57,6 +57,8 @@ if (EMSCRIPTEN)
 
     set(CMAKE_EXE_LINKER_FLAGS " \
     --bind \
+    --use-preload-cache \
+    --closure 1 \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s NO_EXIT_RUNTIME=0 \
     ")
