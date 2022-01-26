@@ -17,6 +17,8 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <algorithm>
+#include <chrono>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
