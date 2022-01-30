@@ -119,18 +119,15 @@
                 var dataClipboard = Module.get_clipboard();
                 if (dataClipboard.length > 0) {
                     console.log(dataClipboard);
-                    if (!isMobile) {
-                        copyToClipboard(dataClipboard);
-                    } else {
-                        if (navigator.share) {
-                            navigator.share({
-                                            title: document.title,
-                                            text: dataClipboard
-                                            //,url: window.location.href
-                            })
-                                .then(() => console.log('Successful share'))
-                                .catch(error => console.log('Error sharing:', error));
-                        }
+                    copyToClipboard(dataClipboard);
+                    if (navigator.share) {
+                        navigator.share({
+                                        title: document.title,
+                                        text: dataClipboard
+                                        //,url: window.location.href
+                        })
+                            .then(() => console.log('Successful share'))
+                            .catch(error => console.log('Error sharing:', error));
                     }
                 }
             }
