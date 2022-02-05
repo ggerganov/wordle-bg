@@ -7,6 +7,7 @@
 #include "IconsFontAwesome5.h"
 #include "IconsFontAwesome5Brands.h"
 
+#define SDL_DISABLE_ARM_NEON_H 1
 #include <SDL.h>
 #include <SDL_opengl.h>
 
@@ -759,12 +760,31 @@ struct State {
                     curCell.type = Cell::Pending;
                 }
 
-                // mark the cells without input as Empty
-                for (int x = n; x < nLettersPerWord; ++x) {
-                    auto & curCell = grid[y][x];
+                if (n == nLettersPerWord) {
+                    // if the pending word exists - color the Enter key to give a hint
+                    bool found = false;
+                    for (const auto & word : words) {
+                        if (word == attemptCur) {
+                            found = true;
+                            break;
+                        }
+                    }
 
-                    curCell.data = "";
-                    curCell.type = Cell::Empty;
+                    if (found) {
+                        keys[kInputEnter] = Cell::Correct;
+                    } else {
+                        keys[kInputEnter] = Cell::Empty;
+                    }
+                } else {
+                    // mark the cells without input as Empty
+                    for (int x = n; x < nLettersPerWord; ++x) {
+                        auto & curCell = grid[y][x];
+
+                        curCell.data = "";
+                        curCell.type = Cell::Empty;
+                    }
+
+                    keys[kInputEnter] = Cell::Empty;
                 }
             }
         }
@@ -2006,7 +2026,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     };
 
     g_input = [&](const std::string & input) {
-        if ((g_state.isAnimating && (int) ::utf8_size(g_state.attemptCur) == g_state.nLettersPerWord) || g_state.isFinished) return;
+        if (g_state.isAnimating && input == kInputEnter) return;
 
         auto & cur = g_state.attemptCur;
 
