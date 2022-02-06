@@ -1475,7 +1475,7 @@ void renderMain() {
 
         // close help window
         if (tShown >= 1.0f) {
-            if (ImGui::IsMouseReleased(0)) {
+            if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE)) {
                 g_state.help.showWindow = false;
                 g_state.help.tHide = T;
             }
@@ -2026,7 +2026,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     };
 
     g_input = [&](const std::string & input) {
-        if (g_state.isAnimating && input == kInputEnter) return;
+        if ((g_state.isAnimating && input == kInputEnter) || g_state.isFinished) return;
 
         auto & cur = g_state.attemptCur;
 
