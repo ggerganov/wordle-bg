@@ -1,4 +1,6 @@
 .cache
+.exrc
+
 build/
 build-em/
 
