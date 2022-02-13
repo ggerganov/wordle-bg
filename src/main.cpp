@@ -39,6 +39,7 @@ using TColor = uint32_t;
 const auto kTitle          = "УЪРДЪЛ";
 const auto kTitleClipboard = "Уърдъл 🇧🇬";
 const auto kURL            = "wordle-bg.ggerganov.com";
+const auto kHashtag        = "#уърдъл";
 const auto kFontScale      = 3.0f;
 
 // animation time in seconds
@@ -50,6 +51,7 @@ const float kTimeShow       = 0.20f; // time to show popup window
 const float kTimeGuessed    = 2.00f; // time to display text upon correct answer
 const float kTimeClipboard  = 2.00f; // time to display text about result being copied to the clipboard
 const float kTimeIncorrect  = 1.00f; // time to display text about incorrect input
+const float kTimeInitialize = 3.00f; // time to initialize the UI
 
 // timestamp of the first puzzle
 // 15 Jan 2022 00:00:00
@@ -427,6 +429,12 @@ struct Settings {
 
     bool rectRounding = true;
     bool rectRoundingNew = rectRounding;
+
+    bool addHashtag = true;
+    bool addHashtagNew = addHashtag;
+
+    bool addURL = true;
+    bool addURLNew = addURL;
 
     // is the window currently visible?
     bool visible(float T) const {
@@ -898,8 +906,16 @@ struct State {
             dataClipboard += "\n";
         }
         dataClipboard += "\n";
-        dataClipboard += kURL;
-        dataClipboard += "\n";
+
+        if (settings.addHashtag) {
+            dataClipboard += kHashtag;
+            if (settings.addURL) {
+                dataClipboard += " ";
+            }
+        }
+        if (settings.addURL) {
+            dataClipboard += kURL;
+        }
     }
 
     // update the dataSettings member - to be consumed by the JS layer
@@ -909,6 +925,10 @@ struct State {
         dataSettings += std::to_string((int) settings.rectRounding);
         dataSettings += " ";
         dataSettings += std::to_string((int) settings.keyboardType);
+        dataSettings += " ";
+        dataSettings += std::to_string((int) settings.addHashtag);
+        dataSettings += " ";
+        dataSettings += std::to_string((int) settings.addURL);
     }
 } g_state;
 
@@ -990,6 +1010,35 @@ void initMain() {
     //g_state.statistics.guesses[5] = 8;
 
     g_state.update(T, true);
+}
+
+int ImRotateStart() {
+	return ImGui::GetWindowDrawList()->VtxBuffer.Size;
+}
+
+ImVec2 ImRotationCenter(int idx) {
+	ImVec2 l(FLT_MAX, FLT_MAX), u(-FLT_MAX, -FLT_MAX); // bounds
+
+	const auto& buf = ImGui::GetWindowDrawList()->VtxBuffer;
+	for (int i = idx; i < buf.Size; i++) {
+		l = ImMin(l, buf[i].pos), u = ImMax(u, buf[i].pos);
+    }
+
+	return ImVec2((l.x+u.x)/2, (l.y+u.y)/2); // or use _ClipRectStack?
+}
+
+void ImRotateEnd(float rad, int idx, ImVec2 center) {
+    struct Ops {
+        static ImVec2 sub(const ImVec2& l, const ImVec2& r) { return{ l.x - r.x, l.y - r.y }; };
+    };
+
+    float s=sin(rad), c=cos(rad);
+    center = Ops::sub(ImRotate(center, s, c), center);
+
+    auto& buf = ImGui::GetWindowDrawList()->VtxBuffer;
+    for (int i = idx; i < buf.Size; i++) {
+        buf[i].pos = Ops::sub(ImRotate(buf[i].pos, s, c), center);
+    }
 }
 
 // return true if the box has been clicked
@@ -1179,11 +1228,19 @@ void renderMain() {
         }
 
         // draw settings button
-        if (renderText(ICON_FA_COG, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -0.85f, 0.0f })) {
-            if (g_state.settings.showWindow == false) {
-                g_state.settings.showWindow = true;
-                g_state.settings.tShow = T;
+        {
+            const auto idx = ImRotateStart();
+
+            if (renderText(ICON_FA_COG, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -0.85f, 0.0f })) {
+                if (g_state.settings.showWindow == false) {
+                    g_state.settings.showWindow = true;
+                    g_state.settings.tShow = T;
+                }
             }
+
+            const float iR = ::I(T - 1.0f, kTimeInitialize);
+            ImRotateEnd(200.0f*std::pow((1.0f - iR)*iR, 2.0f), idx, ImRotationCenter(idx));
+            g_state.animation(iR);
         }
 
         // draw title separator
@@ -1667,7 +1724,7 @@ void renderMain() {
         bool ignoreClose = false;
 
         const float kCurScale = std::min(1.0f, (g_state.keyboardMaxX - g_state.keyboardMinX)/473.0f);
-        const float kFontSize = 1.25f*kCurScale;
+        const float kFontSize = 1.00f*kCurScale;
         const float kWindowYMax = 440.0f*kCurScale;
 
         {
@@ -1704,56 +1761,100 @@ void renderMain() {
                 const float kRowHeight = ImGui::CalcTextSize("A").y;
 
                 ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
-                renderText("НАСТРОЙКИ", { c0.x, ul.y + kMarginY + 4.0f*kRowHeight, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
 
-                if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
-                    ignoreClose = true;
-                    g_state.settings.tKeyboardSwitched = T;
-                    if (g_state.settings.keyboardType == EKeyboardType::Phonetic) {
-                        g_state.settings.keyboardTypeNew = EKeyboardType::BDS;
-                    } else if (g_state.settings.keyboardType == EKeyboardType::BDS) {
-                        g_state.settings.keyboardTypeNew = EKeyboardType::Phonetic;
+                {
+                    const float kOffsetY = 4.0f*kRowHeight;
+                    const float kIconSize = 3.0f*kFontSize;
+
+                    renderText("НАСТРОЙКИ", { c0.x, ul.y + kMarginY + kOffsetY, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
+
+                    if (renderText(ICON_FA_KEYBOARD, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + kOffsetY + 5.0f*kRowHeight, }, colors.at(EColor::Text), kIconSize, true)) {
+                        ignoreClose = true;
+                        g_state.settings.tKeyboardSwitched = T;
+                        if (g_state.settings.keyboardType == EKeyboardType::Phonetic) {
+                            g_state.settings.keyboardTypeNew = EKeyboardType::BDS;
+                        } else if (g_state.settings.keyboardType == EKeyboardType::BDS) {
+                            g_state.settings.keyboardTypeNew = EKeyboardType::Phonetic;
+                        }
                     }
-                }
 
-                if (renderText(ICON_FA_LIGHTBULB, { c0.x, ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
-                    ignoreClose = true;
-                    if (g_state.settings.colorTheme == EColorTheme::Light) {
-                        g_state.settings.colorThemeNew = EColorTheme::Dark;
-                    } else if (g_state.settings.colorTheme == EColorTheme::Dark) {
-                        g_state.settings.colorThemeNew = EColorTheme::Light;
+                    if (renderText(ICON_FA_LIGHTBULB, { c0.x, ul.y + kMarginY + kOffsetY + 5.0f*kRowHeight, }, colors.at(EColor::Text), kIconSize, true)) {
+                        ignoreClose = true;
+                        if (g_state.settings.colorTheme == EColorTheme::Light) {
+                            g_state.settings.colorThemeNew = EColorTheme::Dark;
+                        } else if (g_state.settings.colorTheme == EColorTheme::Dark) {
+                            g_state.settings.colorThemeNew = EColorTheme::Light;
+                        }
                     }
-                }
 
-                if (renderBox(drawList, " ", { 0.5f*(c0.x + lr.x), ul.y + kMarginY + 8.0f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true, { 0.0f, 0.0f, }, g_state.settings.rectRounding ? 0.0f : 8.0f)) {
-                    ignoreClose = true;
-                    if (g_state.settings.rectRounding == false) {
-                        g_state.settings.rectRoundingNew = true;
-                    } else if (g_state.settings.rectRounding == true) {
-                        g_state.settings.rectRoundingNew = false;
+                    if (renderBox(drawList, " ", { 0.5f*(c0.x + lr.x), ul.y + kMarginY + kOffsetY + 5.0f*kRowHeight, }, colors.at(EColor::Text), 0.10f, true, { 0.0f, 0.0f, }, g_state.settings.rectRounding ? 0.0f : 8.0f)) {
+                        ignoreClose = true;
+                        if (g_state.settings.rectRounding == false) {
+                            g_state.settings.rectRoundingNew = true;
+                        } else if (g_state.settings.rectRounding == true) {
+                            g_state.settings.rectRoundingNew = false;
+                        }
                     }
-                }
 
-                renderText("КОНТАКТИ", { c0.x, ul.y + kMarginY + 14.0f*kRowHeight, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
+                    //const float kOffsetY = 13.0f*kRowHeight;
+                    //const float kIconSize = 2.0f*kFontSize;
 
-                if (renderText(ICON_FA_ENVELOPE, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
-                    ignoreClose = true;
-                    g_state.dataURL = "mailto:ggerganov@gmail.com?subject=Feedback (wordle-bg)";
-                }
+                    //renderText("СПОДЕЛЯНЕ", { c0.x, ul.y + kMarginY + kOffsetY, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
 
-                if (renderText(ICON_FA_TWITTER, { c0.x, ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
-                    ignoreClose = true;
-                    g_state.dataURL = "https://twitter.com/ggerganov";
-                }
+                    {
+                        const auto col = ImGui::ColorConvertU32ToFloat4(colors.at(EColor::Text));
+                        const auto colCur = ImGui::ColorConvertFloat4ToU32({ col.x, col.y, col.z, g_state.settings.addHashtag ? 1.0f : 0.5f });
 
-                if (renderText(ICON_FA_GITHUB, { 0.5f*(c0.x + lr.x), ul.y + kMarginY + 18.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true)) {
-                    ignoreClose = true;
-                    g_state.dataURL = "https://github.com/ggerganov/wordle-bg";
+                        if (renderText(ICON_FA_HASHTAG, { ul.x + 0.75f*(c0.x - ul.x), ul.y + kMarginY + kOffsetY + 10.0f*kRowHeight, }, colCur, kIconSize, true)) {
+                            ignoreClose = true;
+                            if (g_state.settings.addHashtag == false) {
+                                g_state.settings.addHashtagNew = true;
+                            } else if (g_state.settings.addHashtag == true) {
+                                g_state.settings.addHashtagNew = false;
+                            }
+                        }
+                    }
+
+                    {
+                        const auto col = ImGui::ColorConvertU32ToFloat4(colors.at(EColor::Text));
+                        const auto colCur = ImGui::ColorConvertFloat4ToU32({ col.x, col.y, col.z, g_state.settings.addURL ? 1.00f : 0.25f });
+
+                        if (renderText(ICON_FA_LINK, { lr.x - 0.75f*(lr.x - c0.x), ul.y + kMarginY + kOffsetY + 10.0f*kRowHeight, }, colCur, kIconSize, true)) {
+                            ignoreClose = true;
+                            if (g_state.settings.addURL == false) {
+                                g_state.settings.addURLNew = true;
+                            } else if (g_state.settings.addURL == true) {
+                                g_state.settings.addURLNew = false;
+                            }
+                        }
+                    }
                 }
 
                 {
-                    const std::string puzzleId = std::string("#") + std::to_string(g_state.puzzleId());
-                    renderText(puzzleId, { lr.x, lr.y, }, colors.at(EColor::PendingBorder), 1.0f, true, { -1.20f, -1.10f, });
+                    const float kOffsetY = 19.0f*kRowHeight;
+                    const float kIconSize = 3.0f*kFontSize;
+
+                    renderText("КОНТАКТИ", { c0.x, ul.y + kMarginY + kOffsetY, }, colors.at(EColor::Text), 1.5f*kFontSize, true);
+
+                    if (renderText(ICON_FA_ENVELOPE, { 0.5f*(ul.x + c0.x), ul.y + kMarginY + kOffsetY + 4.0f*kRowHeight, }, colors.at(EColor::Text), kIconSize, true)) {
+                        ignoreClose = true;
+                        g_state.dataURL = "mailto:ggerganov@gmail.com?subject=Feedback (wordle-bg)";
+                    }
+
+                    if (renderText(ICON_FA_TWITTER, { c0.x, ul.y + kMarginY + kOffsetY + 4.0f*kRowHeight, }, colors.at(EColor::Text), kIconSize, true)) {
+                        ignoreClose = true;
+                        g_state.dataURL = "https://twitter.com/ggerganov";
+                    }
+
+                    if (renderText(ICON_FA_GITHUB, { 0.5f*(c0.x + lr.x), ul.y + kMarginY + kOffsetY + 4.0f*kRowHeight, }, colors.at(EColor::Text), kIconSize, true)) {
+                        ignoreClose = true;
+                        g_state.dataURL = "https://github.com/ggerganov/wordle-bg";
+                    }
+
+                    {
+                        const std::string puzzleId = std::string("#") + std::to_string(g_state.puzzleId());
+                        renderText(puzzleId, { lr.x, lr.y, }, colors.at(EColor::PendingBorder), 1.0f, true, { -1.20f, -1.10f, });
+                    }
                 }
 
                 ImGui::PopFont();
@@ -1812,6 +1913,16 @@ void updatePre() {
 
     if (g_state.settings.rectRounding != g_state.settings.rectRoundingNew) {
         g_state.settings.rectRounding = g_state.settings.rectRoundingNew;
+        g_state.updateDataSettings();
+    }
+
+    if (g_state.settings.addHashtag != g_state.settings.addHashtagNew) {
+        g_state.settings.addHashtag = g_state.settings.addHashtagNew;
+        g_state.updateDataSettings();
+    }
+
+    if (g_state.settings.addURL != g_state.settings.addURLNew) {
+        g_state.settings.addURL = g_state.settings.addURLNew;
         g_state.updateDataSettings();
     }
 }
@@ -2130,6 +2241,22 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
             ss >> tmp;
             if (tmp != -1) {
                 g_state.settings.keyboardTypeNew = (EKeyboardType) tmp;
+            }
+        }
+
+        {
+            int tmp = -1;
+            ss >> tmp;
+            if (tmp != -1) {
+                g_state.settings.addHashtagNew = tmp;
+            }
+        }
+
+        {
+            int tmp = -1;
+            ss >> tmp;
+            if (tmp != -1) {
+                g_state.settings.addURLNew = tmp;
             }
         }
     };
