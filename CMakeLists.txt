@@ -12,7 +12,7 @@ include(cmake/GitVars.cmake)
 include(cmake/BuildTypes.cmake)
 
 if (EMSCRIPTEN)
-    option(WORDLE_WASM_SINGLE_FILE "wordle: embed WASM inside the generated wordle.js" ON)
+    option(WORDLE_WASM_SINGLE_FILE "wordle: embed WASM inside the generated wordle.js" OFF)
 else()
     if (MINGW)
         set(BUILD_SHARED_LIBS_DEFAULT OFF)

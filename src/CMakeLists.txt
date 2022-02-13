@@ -33,8 +33,9 @@ if (EMSCRIPTEN)
     if (WORDLE_WASM_SINGLE_FILE)
         set(EXTRA_FLAGS "-s SINGLE_FILE=1")
         message(STATUS "Embedding WASM inside .js")
-
     endif()
+
+    set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "${TARGET}-${GIT_SHA1}")
 
     set_target_properties(${TARGET} PROPERTIES LINK_FLAGS " \
         --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/../words@/ \
