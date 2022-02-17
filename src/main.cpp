@@ -51,7 +51,7 @@ const float kTimeShow       = 0.20f; // time to show popup window
 const float kTimeGuessed    = 2.00f; // time to display text upon correct answer
 const float kTimeClipboard  = 2.00f; // time to display text about result being copied to the clipboard
 const float kTimeIncorrect  = 1.00f; // time to display text about incorrect input
-const float kTimeInitialize = 3.00f; // time to initialize the UI
+const float kTimeInitialize = 2.00f; // time to initialize the UI
 
 // timestamp of the first puzzle
 // 15 Jan 2022 00:00:00
@@ -1239,7 +1239,7 @@ void renderMain() {
             }
 
             const float iR = ::I(T - 1.0f, kTimeInitialize);
-            ImRotateEnd(200.0f*std::pow((1.0f - iR)*iR, 2.0f), idx, ImRotationCenter(idx));
+            ImRotateEnd(50.0f*std::pow((1.0f - iR)*iR, 2.0f), idx, ImRotationCenter(idx));
             g_state.animation(iR);
         }
 
