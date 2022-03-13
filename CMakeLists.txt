@@ -1,6 +1,8 @@
 cmake_minimum_required (VERSION 3.10)
 project(wordle)
 
+# salt : a81ed3ce
+
 set(OpenGL_GL_PREFERENCE "GLVND")
 
 enable_testing()
