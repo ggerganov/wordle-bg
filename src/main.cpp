@@ -369,6 +369,20 @@ struct Help {
     }
 };
 
+// advert window vars
+struct Advert {
+    bool showWindow = false; // show the window on the screen
+
+    // used for fade animations
+    float tShow = -100.0f;
+    float tHide = -100.0f;
+
+    // is the window currently visible?
+    bool visible(float T) const {
+        return showWindow && T > tShow;
+    }
+};
+
 // statistics for the games that the player has played so far
 struct Statistics {
     bool showWindow = false; // show the window on the screen
@@ -480,6 +494,7 @@ struct State {
 
     // popup windows
     Help help;
+    Advert advert;
     Statistics statistics;
     Settings settings;
 
@@ -1219,6 +1234,14 @@ void renderMain() {
             }
         }
 
+        // draw advert button
+        if (renderText(ICON_FA_SCROLL, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.20f, 0.0f })) {
+            if (g_state.advert.showWindow == false) {
+                g_state.advert.showWindow = true;
+                g_state.advert.tShow = T;
+            }
+        }
+
         // draw statistics button
         if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && hasPopup == false) {
             if (g_state.statistics.showWindow == false) {
@@ -1539,6 +1562,95 @@ void renderMain() {
         }
     } else {
         const auto tHidden = ::I(T - g_state.help.tHide, kTimeShow);
+
+        g_state.animation(tHidden);
+
+        if (tHidden < 1.0f) {
+            // fade-in main window
+            drawList->AddRectFilled({ 0.0f, 0.0f }, wSize, ImGui::ColorConvertFloat4ToU32({ 0.0f, 0.0f, 0.0f, (1.0f - tHidden)*kColorFade.w }));
+        }
+    }
+
+    // advert window
+    if (g_state.advert.visible(T)) {
+        const auto tShown = ::I(T - g_state.advert.tShow, kTimeShow);
+
+        g_state.animation(tShown);
+
+        // fade-out main window
+        drawList->AddRectFilled({ 0.0f, 0.0f }, wSize, ImGui::ColorConvertFloat4ToU32({ 0.0f, 0.0f, 0.0f, tShown*kColorFade.w }));
+
+        const float kWindowYMax = 425.0f;
+
+        {
+            // upper-left corner
+            const ImVec2 ul = {
+                g_state.keyboardMinX,
+                0.5f*wSize.y - 0.25f*kWindowYMax,
+            };
+
+            // lower-right corner
+            const ImVec2 lr = {
+                g_state.keyboardMaxX,
+                0.5f*wSize.y + 0.25f*kWindowYMax,
+            };
+
+            // center
+            const ImVec2 c0 = {
+                0.5f*(ul.x + lr.x),
+                0.5f*(ul.y + lr.y),
+            };
+
+            // leave some empty space near the window border
+            const float kMarginX = 60.0f;
+            const float kMarginY = 30.0f;
+
+            // window floor
+            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 1.0f);
+
+            {
+                ImGui::SetWindowFontScale(1.25f/kFontScale);
+                const float kRowHeight = ImGui::CalcTextSize("A").y;
+
+                renderText("Отгатни скритите думи в новините от вчера", { c0.x, ul.y + 3.0f*kRowHeight, }, colors.at(EColor::Text), 1.25f, true);
+
+                // Advert button
+                {
+                    const ImVec2 p0 = {
+                        ul.x + 0.50f*(lr.x - ul.x),
+                        ul.y + 7.0f*kRowHeight,
+                    };
+
+                    if (renderTextWithBackground(drawList, "Играй ОТГАТНОВИНИ   " ICON_FA_PLAY, p0, colors.at(EColor::TextSubmitted), colors.at(EColor::CorrectFill), 1.25f, true)) {
+                        g_state.dataURL = "https://otgatnovini.ggerganov.com";
+                    }
+                }
+            }
+
+            // copy results to clipboard
+            if (::within(T, g_state.tShared, kTimeClipboard)) {
+                const float kBaseMargin = 25.0f;
+                const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
+
+                const ImVec2 p0 = {
+                    0.5f*g_state.rendering.wSize.x,
+                    g_state.heightTitle + 0.1f*kGridHeightMax + kBaseMargin,
+                };
+
+                renderTextWithBackground(drawList, "Резултатите са копирани в клипборда", p0, colors.at(EColor::Background), colors.at(EColor::Title), 1.25f, true);
+            }
+        }
+
+        // close advert window
+        if (tShown >= 1.0f) {
+            if (ImGui::IsMouseReleased(0) || ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE)) {
+                g_state.advert.showWindow = false;
+                g_state.advert.tHide = T;
+            }
+        }
+    } else {
+        const auto tHidden = ::I(T - g_state.advert.tHide, kTimeShow);
 
         g_state.animation(tHidden);
 
