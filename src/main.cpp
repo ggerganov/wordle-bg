@@ -1235,12 +1235,12 @@ void renderMain() {
         }
 
         // draw advert button
-        if (renderText(ICON_FA_SCROLL, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.20f, 0.0f })) {
-            if (g_state.advert.showWindow == false) {
-                g_state.advert.showWindow = true;
-                g_state.advert.tShow = T;
-            }
-        }
+        //if (renderText(ICON_FA_SCROLL, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.20f, 0.0f })) {
+        //    if (g_state.advert.showWindow == false) {
+        //        g_state.advert.showWindow = true;
+        //        g_state.advert.tShow = T;
+        //    }
+        //}
 
         // draw statistics button
         if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && hasPopup == false) {
@@ -1600,10 +1600,6 @@ void renderMain() {
                 0.5f*(ul.x + lr.x),
                 0.5f*(ul.y + lr.y),
             };
-
-            // leave some empty space near the window border
-            const float kMarginX = 60.0f;
-            const float kMarginY = 30.0f;
 
             // window floor
             drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
