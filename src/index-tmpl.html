@@ -161,7 +161,13 @@
                 if (isInitialized == false) {
                     //var puzzleIdOffset = findGetParameter('p') || 0;
                     //Module.set_timestamp((new Date().getTime()/1000) + 24*3600*puzzleIdOffset);
-                    Module.set_timestamp((new Date().getTime()/1000));
+
+                    // take into account EEST timezone
+                    {
+                        var d = new Date();
+                        var T = (d.getTime() - (d.getTimezoneOffset() + 120)*60*1000)/1000;
+                        Module.set_timestamp(T);
+                    }
 
                     if (localStorage.getItem('attempts') !== null) {
                         Module.set_attempts(localStorage.attempts);
