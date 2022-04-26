@@ -1704,25 +1704,25 @@ void renderMain() {
 
                 {
                     const auto num = std::to_string(g_state.statistics.nPlayed);
-                    renderText(num,      { c0.x - 0.25f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true);
+                    renderText(num,      { c0.x - 0.25f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 2.00f, true);
                     renderText("Играни", { c0.x - 0.25f*(lr.x - ul.x), ul.y + 6.5f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true);
                 }
 
                 {
                     const auto num = std::to_string((int) std::round(g_state.statistics.winPercentage()));
-                    renderText(num,         { c0.x - 0.08f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true);
+                    renderText(num,         { c0.x - 0.08f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 2.00f, true);
                     renderText("Познати %", { c0.x - 0.08f*(lr.x - ul.x), ul.y + 6.5f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true);
                 }
 
                 {
                     const auto num = std::to_string((int) std::round(g_state.statistics.streakCur));
-                    renderText(num,      { c0.x + 0.10f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true);
+                    renderText(num,      { c0.x + 0.10f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 2.00f, true);
                     renderText("Подред", { c0.x + 0.10f*(lr.x - ul.x), ul.y + 6.5f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true);
                 }
 
                 {
                     const auto num = std::to_string((int) std::round(g_state.statistics.streakMax));
-                    renderText(num,      { c0.x + 0.25f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 3.00f, true);
+                    renderText(num,      { c0.x + 0.25f*(lr.x - ul.x), ul.y + 5.0f*kRowHeight, }, colors.at(EColor::Text), 2.00f, true);
                     renderText("Макс.",  { c0.x + 0.25f*(lr.x - ul.x), ul.y + 6.5f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true);
                     renderText("Подред", { c0.x + 0.25f*(lr.x - ul.x), ul.y + 7.5f*kRowHeight, }, colors.at(EColor::Text), 1.00f, true);
                 }
