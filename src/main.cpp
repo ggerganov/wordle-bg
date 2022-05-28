@@ -1350,7 +1350,13 @@ void renderMain() {
                 ImGui::PushClipRect( pp0, pp1, true);
 
                 const auto colText = curCell.submitted() && iFlip > 0.5f ? colors.at(EColor::TextSubmitted) : colors.at(EColor::Text);
-                renderText(curCell.data, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colText, 1.0f*(kCellSize/27.0f), true);
+                if (y < (int) g_state.attempts.size() && g_state.attempts[y] == "МАЛЪК") {
+                    renderText(curCell.data, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colText, 1.0f*(kCellSize/40.0f), true);
+                } else if (y < (int) g_state.attempts.size() && g_state.attempts[y] == "ГОЛЯМ") {
+                    renderText(curCell.data, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colText, 1.0f*(kCellSize/15.0f), true);
+                } else {
+                    renderText(curCell.data, { 0.5f*(p0.x + p1.x), 0.5f*(p0.y + p1.y), }, colText, 1.0f*(kCellSize/27.0f), true);
+                }
 
                 ImGui::PopClipRect();
             }
