@@ -906,7 +906,7 @@ struct State {
     // update the dataClipboard member - to be consumed by the JS layer
     void updateDataClipboard(const TColorTheme & colors) {
         const int n = attempts.size();
-        const std::string special = (isGuessed && isHardMode()) ? "*" : "";
+        const std::string special = isHardMode() ? "*" : "";
         const std::string tries = isGuessed ? std::to_string(n) : "X";
         dataClipboard = std::string(kTitleClipboard) + " " + std::to_string(puzzleId()) + " " + tries + "/" + std::to_string(nAttemptsTotal) + special + "\n\n";
         for (int y = 0; y < n; ++y) {
