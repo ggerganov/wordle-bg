@@ -146,14 +146,14 @@ using TKeyboard = std::vector<std::vector<std::string>>;
 
 const TKeyboard kKeyboardBDS = {
     { "У", "Е", "И", "Ш", "Щ", "К", "С", "Д", "З", "Ц", "Б", },
-    { "ь", "Я", "А", "О", "Ж", "Г", "Т", "Н", "В", "М", "Ч", },
+    { "Ь", "Я", "А", "О", "Ж", "Г", "Т", "Н", "В", "М", "Ч", },
     { kInputEnter, "Ю", "Й", "Ъ", "Ф", "Х", "П", "Р", "Л", kInputBackspace, },
 };
 
 const TKeyboard kKeyboardPhonetic = {
     { "Я", "В", "Е", "Р", "Т", "Ъ", "У", "И", "О", "П", "Ю", },
     { "А", "С", "Д", "Ф", "Г", "Х", "Й", "К", "Л", "Ш", "Щ", },
-    { kInputEnter, "З", "ь", "Ц", "Ж", "Б", "Н", "М", "Ч", kInputBackspace, },
+    { kInputEnter, "З", "Ь", "Ц", "Ж", "Б", "Н", "М", "Ч", kInputBackspace, },
 };
 
 const std::map<EKeyboardType, TKeyboard> kKeyboards = {
@@ -2064,7 +2064,7 @@ void updatePost() {
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("У");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Ж");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("В");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("ь");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Ь");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Ъ");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("З");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE))        g_input("Ч");
@@ -2074,7 +2074,7 @@ void updatePost() {
             } break;
         case EKeyboardType::BDS:
             {
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("ь");
+                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("Ь");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Ф");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ъ");
                 if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("А");
