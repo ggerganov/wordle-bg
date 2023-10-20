@@ -994,6 +994,12 @@ void initMain() {
 
                 // the daily pool list is already randomized:
                 g_state.answer = wordsDailyPool[puzzleId%wordsDailyPool.size()];
+
+                // workaround for latin letter in word ПРЯКА
+                // ref: https://github.com/ggerganov/wordle-bg/issues/8
+                if (puzzleId == 643) {
+                    g_state.answer = "ПРЯКА";
+                }
             }
         }
     }
