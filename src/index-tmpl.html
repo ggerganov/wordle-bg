@@ -117,15 +117,27 @@
                 var dataClipboard = Module.get_clipboard();
                 if (dataClipboard.length > 0) {
                     console.log(dataClipboard);
-                    copyToClipboard(dataClipboard);
                     if (navigator.share) {
                         navigator.share({
                                         title: document.title,
                                         text: dataClipboard
                                         //,url: window.location.href
                         })
-                            .then(() => console.log('Successful share'))
-                            .catch(error => console.log('Error sharing:', error));
+                            .then(function() {
+                                console.log('Successful share');
+                                Module.set_clipboard_text_visible(false);
+                            })
+                            .catch(function(error) {
+                                console.log('Error sharing:', error);
+
+                                // Copy to clipboard on share error, except when the share is aborted.
+                                if (!(error instanceof AbortError)) {
+                                    Module.set_clipboard_text_visible(true);
+                                    copyToClipboard(dataClipboard);
+                                }
+                            });
+                    } else {
+                        copyToClipboard(dataClipboard);
                     }
                 }
             }
@@ -149,6 +161,12 @@
             }
 
             function init() {
+                // If sharing is supported, hide the "Results copied to clipboard" text by default.
+                // The text will be shown only if sharing fails.
+                if (navigator.share) {
+                    Module.set_clipboard_text_visible(false);
+                }
+
                 document.getElementById('container_status').innerHTML = "WebAssembly module initialized successfully!"
                 document.getElementById('container_status').style.color = "#00ff00";
 

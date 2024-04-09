@@ -249,6 +249,9 @@ std::function<std::string()> g_getSettings;
 // returns a string with emojies representing the player's attempts to guess the word
 std::function<std::string()> g_getClipboard;
 
+// called from JS to show/hide the "Results copied to clipboard" text
+std::function<void(bool)> g_setClipboardTextVisible;
+
 // called from JS to check if an URL has been clicked
 // returns a string with the URL address
 std::function<std::string()> g_getURL;
@@ -265,18 +268,19 @@ void mainUpdate(void *) {
 // These functions are used to pass data back and forth between the JS and the C++ code
 
 EMSCRIPTEN_BINDINGS(wordle) {
-    emscripten::function("do_init",         emscripten::optional_override([]() -> int                   { return g_doInit(); }));
-    emscripten::function("set_window_size", emscripten::optional_override([](int sizeX, int sizeY)      { g_setWindowSize(sizeX, sizeY); }));
-    emscripten::function("input",           emscripten::optional_override([](const std::string & input) { g_input(input); }));
-    emscripten::function("set_attempts",    emscripten::optional_override([](const std::string & input) { g_setAttempts(input); }));
-    emscripten::function("get_attempts",    emscripten::optional_override([]() -> std::string           { return g_getAttempts(); }));
-    emscripten::function("set_statistics",  emscripten::optional_override([](const std::string & input) { g_setStatistics(input); }));
-    emscripten::function("get_statistics",  emscripten::optional_override([]() -> std::string           { return g_getStatistics(); }));
-    emscripten::function("set_settings",    emscripten::optional_override([](const std::string & input) { g_setSettings(input); }));
-    emscripten::function("get_settings",    emscripten::optional_override([]() -> std::string           { return g_getSettings(); }));
-    emscripten::function("get_clipboard",   emscripten::optional_override([]() -> std::string           { return g_getClipboard(); }));
-    emscripten::function("get_url",         emscripten::optional_override([]() -> std::string           { return g_getURL(); }));
-    emscripten::function("set_timestamp",   emscripten::optional_override([](double input)              { g_setTimestamp(input); }));
+    emscripten::function("do_init",                    emscripten::optional_override([]() -> int                   { return g_doInit(); }));
+    emscripten::function("set_window_size",            emscripten::optional_override([](int sizeX, int sizeY)      { g_setWindowSize(sizeX, sizeY); }));
+    emscripten::function("input",                      emscripten::optional_override([](const std::string & input) { g_input(input); }));
+    emscripten::function("set_attempts",               emscripten::optional_override([](const std::string & input) { g_setAttempts(input); }));
+    emscripten::function("get_attempts",               emscripten::optional_override([]() -> std::string           { return g_getAttempts(); }));
+    emscripten::function("set_statistics",             emscripten::optional_override([](const std::string & input) { g_setStatistics(input); }));
+    emscripten::function("get_statistics",             emscripten::optional_override([]() -> std::string           { return g_getStatistics(); }));
+    emscripten::function("set_settings",               emscripten::optional_override([](const std::string & input) { g_setSettings(input); }));
+    emscripten::function("get_settings",               emscripten::optional_override([]() -> std::string           { return g_getSettings(); }));
+    emscripten::function("get_clipboard",              emscripten::optional_override([]() -> std::string           { return g_getClipboard(); }));
+    emscripten::function("set_clipboard_text_visible", emscripten::optional_override([](bool visible)              { g_setClipboardTextVisible(visible); }));
+    emscripten::function("get_url",                    emscripten::optional_override([]() -> std::string           { return g_getURL(); }));
+    emscripten::function("set_timestamp",              emscripten::optional_override([](double input)              { g_setTimestamp(input); }));
 }
 #endif
 
@@ -481,6 +485,8 @@ struct State {
     float tShared    = -100.0f; // timestamp of when player clicked on Share button
     float tFinished  = -100.0f; // timestamp of when the current round finished
     float tIncorrect = -100.0f; // timestamp of last incorrect input
+
+    bool textClipboardVisible = true; // should the "Results copied to clipboard" text be shown?
 
     // type of incorrect input
     enum TypeIncorrect {
@@ -1631,7 +1637,7 @@ void renderMain() {
             }
 
             // copy results to clipboard
-            if (::within(T, g_state.tShared, kTimeClipboard)) {
+            if (g_state.textClipboardVisible && ::within(T, g_state.tShared, kTimeClipboard)) {
                 const float kBaseMargin = 25.0f;
                 const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
 
@@ -1795,7 +1801,7 @@ void renderMain() {
             }
 
             // copy results to clipboard
-            if (::within(T, g_state.tShared, kTimeClipboard)) {
+            if (g_state.textClipboardVisible && ::within(T, g_state.tShared, kTimeClipboard)) {
                 const float kBaseMargin = 25.0f;
                 const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
 
@@ -2385,6 +2391,10 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
         auto res = g_state.dataClipboard;
         g_state.dataClipboard.clear();
         return res;
+    };
+
+    g_setClipboardTextVisible = [&](bool visible) {
+        g_state.textClipboardVisible = visible;
     };
 
     g_getURL = [&]() {
