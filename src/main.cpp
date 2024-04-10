@@ -18,6 +18,7 @@
 #include <map>
 #include <sstream>
 #include <vector>
+#include <memory>
 #include <algorithm>
 #include <chrono>
 
@@ -210,8 +211,11 @@ bool within(float t, float t0, float T) {
 // JS interface
 //
 
-// initialize game
-std::function<bool()> g_doInit;
+// initialize initial puzzle
+std::function<bool()> g_doPuzzleInit;
+
+// initialize the game state
+std::function<bool()> g_doGameInit;
 
 // set new window size
 std::function<void(int, int)> g_setWindowSize;
@@ -222,9 +226,12 @@ std::function<bool()> g_mainUpdate;
 // provide pressed keys
 std::function<void(const std::string & )> g_input;
 
-// set attempted words so far
+// called from JS to get the ID of the current puzzle
+std::function<int()> g_getPuzzleId;
+
+// set attempted words so far for a puzzle
 // called at the start of the game to initialize data from the localStorage
-std::function<void(const std::string & )> g_setAttempts;
+std::function<void(int, const std::string & )> g_setAttempts;
 
 // called from JS to query for any new recorder attempts
 // returns empty string if there are no new attempts
@@ -268,19 +275,21 @@ void mainUpdate(void *) {
 // These functions are used to pass data back and forth between the JS and the C++ code
 
 EMSCRIPTEN_BINDINGS(wordle) {
-    emscripten::function("do_init",                    emscripten::optional_override([]() -> int                   { return g_doInit(); }));
-    emscripten::function("set_window_size",            emscripten::optional_override([](int sizeX, int sizeY)      { g_setWindowSize(sizeX, sizeY); }));
-    emscripten::function("input",                      emscripten::optional_override([](const std::string & input) { g_input(input); }));
-    emscripten::function("set_attempts",               emscripten::optional_override([](const std::string & input) { g_setAttempts(input); }));
-    emscripten::function("get_attempts",               emscripten::optional_override([]() -> std::string           { return g_getAttempts(); }));
-    emscripten::function("set_statistics",             emscripten::optional_override([](const std::string & input) { g_setStatistics(input); }));
-    emscripten::function("get_statistics",             emscripten::optional_override([]() -> std::string           { return g_getStatistics(); }));
-    emscripten::function("set_settings",               emscripten::optional_override([](const std::string & input) { g_setSettings(input); }));
-    emscripten::function("get_settings",               emscripten::optional_override([]() -> std::string           { return g_getSettings(); }));
-    emscripten::function("get_clipboard",              emscripten::optional_override([]() -> std::string           { return g_getClipboard(); }));
-    emscripten::function("set_clipboard_text_visible", emscripten::optional_override([](bool visible)              { g_setClipboardTextVisible(visible); }));
-    emscripten::function("get_url",                    emscripten::optional_override([]() -> std::string           { return g_getURL(); }));
-    emscripten::function("set_timestamp",              emscripten::optional_override([](double input)              { g_setTimestamp(input); }));
+    emscripten::function("do_puzzle_init",             emscripten::optional_override([]() -> int                                 { return g_doPuzzleInit(); }));
+    emscripten::function("do_game_init",               emscripten::optional_override([]() -> int                                 { return g_doGameInit(); }));
+    emscripten::function("set_window_size",            emscripten::optional_override([](int sizeX, int sizeY)                    { g_setWindowSize(sizeX, sizeY); }));
+    emscripten::function("input",                      emscripten::optional_override([](const std::string & input)               { g_input(input); }));
+    emscripten::function("get_puzzle_id",              emscripten::optional_override([]() -> int                                 { return g_getPuzzleId(); }));
+    emscripten::function("set_attempts",               emscripten::optional_override([](int puzzleId, const std::string & input) { g_setAttempts(puzzleId, input); }));
+    emscripten::function("get_attempts",               emscripten::optional_override([]() -> std::string                         { return g_getAttempts(); }));
+    emscripten::function("set_statistics",             emscripten::optional_override([](const std::string & input)               { g_setStatistics(input); }));
+    emscripten::function("get_statistics",             emscripten::optional_override([]() -> std::string                         { return g_getStatistics(); }));
+    emscripten::function("set_settings",               emscripten::optional_override([](const std::string & input)               { g_setSettings(input); }));
+    emscripten::function("get_settings",               emscripten::optional_override([]() -> std::string                         { return g_getSettings(); }));
+    emscripten::function("get_clipboard",              emscripten::optional_override([]() -> std::string                         { return g_getClipboard(); }));
+    emscripten::function("set_clipboard_text_visible", emscripten::optional_override([](bool visible)                            { g_setClipboardTextVisible(visible); }));
+    emscripten::function("get_url",                    emscripten::optional_override([]() -> std::string                         { return g_getURL(); }));
+    emscripten::function("set_timestamp",              emscripten::optional_override([](double input)                            { g_setTimestamp(input); }));
 }
 #endif
 
@@ -469,43 +478,25 @@ struct State {
     Rendering rendering;
 
     // rules
-    int nLettersPerWord = 5;
-    int nAttemptsTotal = 6;
-    int nAttemptsCurrent = 0;
+    static const int nLettersPerWord = 5;
+    static const int nAttemptsTotal = 6;
 
     // words
     std::vector<std::string> words;
+    std::vector<std::string> wordsDailyPool;
 
     // logic + animations
     int64_t timestamp = 0; // timestamp of when the current game started
 
-    bool isGuessed  = false; // has the player guessed the correct word?
-    bool isFinished = false; // has the current round finished (guessed word or ran out of attempts) ?
-
-    float tShared    = -100.0f; // timestamp of when player clicked on Share button
-    float tFinished  = -100.0f; // timestamp of when the current round finished
-    float tIncorrect = -100.0f; // timestamp of last incorrect input
+    float tShared = -100.0f; // timestamp of when player clicked on Share button
 
     bool textClipboardVisible = true; // should the "Results copied to clipboard" text be shown?
-
-    // type of incorrect input
-    enum TypeIncorrect {
-        NotAWord,
-        NotEnoughLetters,
-    } eIncorrect;
-
-    std::string answer;     // puzzle answer
-    std::string attemptCur; // current attempt
-    std::vector<std::string> attempts; // past, submitted attempts
 
     // popup windows
     Help help;
     Advert advert;
     Statistics statistics;
     Settings settings;
-
-    // grid
-    std::vector<std::vector<Cell>> grid;
 
     // layout
     float heightTitle = 50.0f;
@@ -514,18 +505,117 @@ struct State {
     // keyboard
     float keyboardMinX = 0.0f;
     float keyboardMaxX = 0.0f;
-    std::map<std::string, Cell::Type> keys;
 
     // JS interface
-    std::string dataAttempts;
     std::string dataStatistics;
     std::string dataClipboard;
     std::string dataSettings;
     std::string dataURL;
 
+    // Stores the data of a puzzle.
+    // Individual for each puzzle ID.
+    struct Puzzle {
+        int id = -1; // the ID of the puzzle
+
+        std::string answer;     // puzzle answer
+        std::string attemptCur; // current attempt
+        std::vector<std::string> attempts; // past, submitted attempts
+
+        bool countTowardsStats = false; // should this puzzle, on finish, be counted towards statistics?
+
+        // logic
+        bool isInitialized = false; // has the puzzle been updated in State::update() before?
+        bool isGuessed  = false; // has the player guessed the correct word?
+        bool isFinished = false; // has the current round finished (guessed word or ran out of attempts) ?
+
+        float tFinished  = -100.0f; // timestamp of when the current round finished
+        float tIncorrect = -100.0f; // timestamp of last incorrect input
+
+        // type of incorrect input
+        enum class TypeIncorrect {
+            NotAWord,
+            NotEnoughLetters,
+        } eIncorrect;
+
+        // grid
+        std::vector<std::vector<Cell>> grid;
+
+        // keyboard
+        std::map<std::string, Cell::Type> keys;
+
+        // JS interface
+        std::string dataAttempts;
+    };
+    std::vector<std::unique_ptr<Puzzle>> puzzles;
+    Puzzle* currentPuzzle;
+
     //
     // helper methods
     //
+
+    // create a puzzle with a certain ID.
+    Puzzle* createPuzzle(int puzzleId) {
+        auto puzzle = std::make_unique<Puzzle>();
+
+        // Initialize answer
+        if (wordsDailyPool.empty()) {
+            // select a random word, regardless of puzzleId
+            srand(std::time(nullptr));
+            puzzle->answer = words[rand() % words.size()];
+        } else {
+            // select a word, based on puzzId
+            puzzle->id = std::max(0, puzzleId);
+            printf("Puzzle ID: %d\n", puzzle->id);
+
+            // the daily pool list is already randomized:
+            puzzle->answer = wordsDailyPool[puzzle->id % wordsDailyPool.size()];
+
+            // workaround for latin letter in word ПРЯКА
+            // ref: https://github.com/ggerganov/wordle-bg/issues/8
+            // if (puzzleId == 643) {
+            //    puzzle->answer = "ПРЯКА";
+            //}
+        }
+
+        // Initialize grid
+        puzzle->grid.resize(nAttemptsTotal);
+        for (auto& row : puzzle->grid) {
+            row.resize(nLettersPerWord);
+        }
+
+        Puzzle* puzzlePtr = puzzle.get();
+        puzzles.push_back(std::move(puzzle));
+        return puzzlePtr;
+    }
+
+    // searches for a saved puzzle with a certain ID and returns a pointer to it.
+    // if a saved puzzle with a certain ID does not exist, it's created.
+    Puzzle* getPuzzle(int puzzleId) {
+        auto it = std::find_if(puzzles.begin(), puzzles.end(), [puzzleId](const auto& puzzle) { return puzzle->id == puzzleId; });
+        if (it == puzzles.end()) {
+            return createPuzzle(puzzleId);
+        }
+        return it->get();
+    }
+
+    // switches the current puzzle
+    void switchPuzzle(int puzzId) {
+        const int latestPuzzleId = puzzleId();
+        currentPuzzle = getPuzzle(std::min(puzzId, latestPuzzleId));
+        currentPuzzle->countTowardsStats = currentPuzzle->id == latestPuzzleId; // if the latest puzzle has changed, count the new latest puzzle towards statistics as well
+
+        // play quick cell flip animation
+        for (auto& row : currentPuzzle->grid) {
+            for (int x = 0; x < nLettersPerWord; ++x) {
+                if (row[x].submitted()) {
+                    row[x].tSubmit = ImGui::GetTime() + 0.2f*x*kTimeFlip;
+                }
+            }
+        }
+
+        // perform an update on the new puzzle
+        newInput = true;
+    }
 
     // call this at the start of each frame to initialize helper variables
     void initRendering() {
@@ -579,15 +669,16 @@ struct State {
 
     // has the game finished ?
     bool finished(float T) const {
-        return isFinished && T > tFinished && ((isGuessed == false) || (tFinished + kTimeGuessed > T));
+        return currentPuzzle->isFinished && T > currentPuzzle->tFinished &&
+               (currentPuzzle->isGuessed == false || currentPuzzle->tFinished + kTimeGuessed > T);
     }
 
     // helper method to determine the color of the key on the on-screen keyboard
     // <Foreground, Background>
     std::pair<TColor, TColor> colKey(const std::string & ch, const TColorTheme & colors) {
-        if (keys.find(ch) == keys.end()) return { colors.at(EColor::Text), colors.at(EColor::KeyboardUnused), };
+        if (currentPuzzle->keys.find(ch) == currentPuzzle->keys.end()) return { colors.at(EColor::Text), colors.at(EColor::KeyboardUnused), };
 
-        switch (keys.at(ch)) {
+        switch (currentPuzzle->keys.at(ch)) {
             case Cell::Absent:  return { colors.at(EColor::TextSubmitted), colors.at(EColor::AbsentFill), };
             case Cell::Present: return { colors.at(EColor::TextSubmitted), colors.at(EColor::PresentFill), };
             case Cell::Correct: return { colors.at(EColor::TextSubmitted), colors.at(EColor::CorrectFill), };
@@ -613,12 +704,12 @@ struct State {
             limits[ch] = { 0, nLettersPerWord, std::vector<bool>(nLettersPerWord, false) };
         }
 
-        const int nAttempts = attempts.size();
+        const int nAttempts = currentPuzzle->attempts.size();
         for (int y = 0; y < nAttempts; ++y) {
             if (y > 0) {
                 for (int x = 0; x < nLettersPerWord; ++x) {
                     // once correctly guess, the letter should remain correct for the rest of the attempts
-                    if (grid[y-1][x].type == Cell::Correct && grid[y][x].type != Cell::Correct) {
+                    if (currentPuzzle->grid[y-1][x].type == Cell::Correct && currentPuzzle->grid[y][x].type != Cell::Correct) {
                         return false;
                     }
                 }
@@ -626,12 +717,12 @@ struct State {
 
             for (int x = 0; x < nLettersPerWord; ++x) {
                 // check if we known that the letter ch cannot be at position x
-                if (limits[grid[y][x].data].np[x]) {
+                if (limits[currentPuzzle->grid[y][x].data].np[x]) {
                     return false;
                 }
 
-                if (grid[y][x].type != Cell::Correct) {
-                    limits[grid[y][x].data].np[x] = true;
+                if (currentPuzzle->grid[y][x].type != Cell::Correct) {
+                    limits[currentPuzzle->grid[y][x].data].np[x] = true;
                 }
             }
 
@@ -640,13 +731,13 @@ struct State {
             // count how many times the letter occurs in current attempt
             // also, count the number of times the letter was marked as Present or Correct (i.e. non-Absent)
             for (int x = 0; x < nLettersPerWord; ++x) {
-                const auto & ch = grid[y][x].data;
+                const auto & ch = currentPuzzle->grid[y][x].data;
 
                 auto & nInput = cnt[ch].first;
                 auto & nNonAbsent = cnt[ch].second;
 
                 nInput++;
-                if (grid[y][x].type != Cell::Absent) nNonAbsent++;
+                if (currentPuzzle->grid[y][x].type != Cell::Absent) nNonAbsent++;
             }
 
             // limits check - each letter in the new attempt must be within the currently known limits
@@ -690,18 +781,17 @@ struct State {
     //
     // must be called on every frame
     //
-    void update(const float T, bool isInit) {
+    void update(const float T) {
         if (newInput == false) return;
 
-        isGuessed = false;
+        //currentPuzzle->isGuessed = false;
 
-        bool wasFinished = isFinished;
-
-        const int nAttempts = attempts.size();
+        const bool wasFinished = currentPuzzle->isFinished;
+        const int nAttempts = currentPuzzle->attempts.size();
 
         for (int y = 0; y < nAttemptsTotal; ++y) {
             if (y < nAttempts) {
-                const auto & curAttempt = attempts[y];
+                const auto & curAttempt = currentPuzzle->attempts[y];
 
                 std::vector<bool> used(nLettersPerWord, false);
                 std::vector<Cell::Type> guesses(nLettersPerWord, Cell::Absent);
@@ -710,13 +800,13 @@ struct State {
 
                 for (int x = 0; x < nLettersPerWord; ++x) {
                     // initialize used keys as Absent
-                    if (keys.find(::utf8_ch(curAttempt, x)) == keys.end()) {
-                        keys[::utf8_ch(curAttempt, x)] = Cell::Absent;
+                    if (currentPuzzle->keys.find(::utf8_ch(curAttempt, x)) == currentPuzzle->keys.end()) {
+                        currentPuzzle->keys[::utf8_ch(curAttempt, x)] = Cell::Absent;
                     }
 
                     // first detect Correct letters/keys
-                    if (::utf8_cmp(curAttempt, x, answer, x)) {
-                        keys[::utf8_ch(curAttempt, x)] = Cell::Correct;
+                    if (::utf8_cmp(curAttempt, x, currentPuzzle->answer, x)) {
+                        currentPuzzle->keys[::utf8_ch(curAttempt, x)] = Cell::Correct;
                         guesses[x] = Cell::Correct;
                         used[x] = true;
                         ++nCorrect;
@@ -724,8 +814,8 @@ struct State {
                 }
 
                 // we have a guessed word -> end the game and update stats
-                if (isFinished == false && nCorrect == nLettersPerWord) {
-                    if (isInit == false) {
+                if (currentPuzzle->isFinished == false && nCorrect == nLettersPerWord) {
+                    if (currentPuzzle->isInitialized && currentPuzzle->countTowardsStats) {
                         statistics.guesses[y]++;
                         statistics.nPlayed++;
                         statistics.streakCur++;
@@ -733,8 +823,8 @@ struct State {
                             statistics.streakMax = statistics.streakCur;
                         }
                     }
-                    isGuessed = true;
-                    isFinished = true;
+                    currentPuzzle->isGuessed = true;
+                    currentPuzzle->isFinished = true;
                 }
 
                 // next detect Present letters/keys
@@ -743,9 +833,9 @@ struct State {
                     for (int i = 0; i < nLettersPerWord; ++i) {
                         if (x == i) continue;
                         if (used[i]) continue;
-                        if (::utf8_cmp(curAttempt, x, answer, i)) {
-                            if (keys[::utf8_ch(curAttempt, x)] < Cell::Correct) {
-                                keys[::utf8_ch(curAttempt, x)] = Cell::Present;
+                        if (::utf8_cmp(curAttempt, x, currentPuzzle->answer, i)) {
+                            if (currentPuzzle->keys[::utf8_ch(curAttempt, x)] < Cell::Correct) {
+                                currentPuzzle->keys[::utf8_ch(curAttempt, x)] = Cell::Present;
                             }
                             guesses[x] = Cell::Present;
                             used[i] = true;
@@ -756,30 +846,30 @@ struct State {
 
                 // fill in the cells on the current row with the corresponding states and trigger animations
                 for (int x = 0; x < nLettersPerWord; ++x) {
-                    auto & curCell = grid[y][x];
+                    auto & curCell = currentPuzzle->grid[y][x];
 
                     if (curCell.submitted() == false) {
                         curCell.data = ::utf8_ch(curAttempt, x);
                         curCell.type = guesses[x];
-                        if (isInit) {
-                            curCell.tSubmit = T + 0.2f*x*kTimeFlip;
-                        } else {
+                        if (currentPuzzle->isInitialized) {
                             curCell.tSubmit = T + 1.0f*x*kTimeFlip;
                             if (x == 0) updateDataAttempts();
+                        } else {
+                            curCell.tSubmit = T + 0.2f*x*kTimeFlip;
                         }
                     }
                 }
             }
 
             if (y == nAttempts) {
-                const auto & curAttempt = attemptCur;
+                const auto & curAttempt = currentPuzzle->attemptCur;
 
                 // number of letters provided so far
                 const int n = ::utf8_size(curAttempt);
 
                 // mark the provided cells as Pending
                 for (int x = 0; x < n; ++x) {
-                    auto & curCell = grid[y][x];
+                    auto & curCell = currentPuzzle->grid[y][x];
 
                     if (curCell.type == Cell::Empty) {
                         curCell.tSubmit = T;
@@ -793,36 +883,36 @@ struct State {
                     // if the pending word exists - color the Enter key to give a hint
                     bool found = false;
                     for (const auto & word : words) {
-                        if (word == attemptCur) {
+                        if (word == currentPuzzle->attemptCur) {
                             found = true;
                             break;
                         }
                     }
 
                     if (found) {
-                        keys[kInputEnter] = Cell::Correct;
+                        currentPuzzle->keys[kInputEnter] = Cell::Correct;
                     } else {
-                        keys[kInputEnter] = Cell::Empty;
+                        currentPuzzle->keys[kInputEnter] = Cell::Empty;
                     }
                 } else {
                     // mark the cells without input as Empty
                     for (int x = n; x < nLettersPerWord; ++x) {
-                        auto & curCell = grid[y][x];
+                        auto & curCell = currentPuzzle->grid[y][x];
 
                         curCell.data = "";
                         curCell.type = Cell::Empty;
                     }
 
-                    keys[kInputEnter] = Cell::Empty;
+                    currentPuzzle->keys[kInputEnter] = Cell::Empty;
                 }
             }
         }
 
         // failed to guess the word -> end the game + update stats
-        if (isFinished == false) {
-            isFinished = nAttemptsTotal == nAttempts;
-            if (isFinished) {
-                if (isInit == false) {
+        if (currentPuzzle->isFinished == false) {
+            currentPuzzle->isFinished = nAttemptsTotal == nAttempts;
+            if (currentPuzzle->isFinished) {
+                if (currentPuzzle->isInitialized && currentPuzzle->countTowardsStats) {
                     statistics.nPlayed++;
                     statistics.streakCur = 0;
                 }
@@ -830,31 +920,32 @@ struct State {
         }
 
         // the game ended during the current update call -> queue Statistics window to be shown automatically
-        if (isFinished && wasFinished == false) {
-            if (isInit) {
-                statistics.showWindow = true;
-                statistics.tShow = T + (0.2f*nLettersPerWord)*kTimeFlip + 2.0f*kTimeFlip;
-            } else {
+        if (currentPuzzle->isFinished && wasFinished == false && currentPuzzle->countTowardsStats) {
+            if (currentPuzzle->isInitialized) {
                 statistics.showWindow = true;
                 statistics.tShow = T + (1.0f*nLettersPerWord)*kTimeFlip + 1.0f*kTimeGuessed;
+            } else {
+                statistics.showWindow = true;
+                statistics.tShow = T + (0.2f*nLettersPerWord)*kTimeFlip + 2.0f*kTimeFlip;
             }
         }
 
         // the game has ended -> send new Statistics data to the JS layer
         // it will be stored in the browser's localStorage in order to be persisted for the next round
-        if (isFinished && isInit == false) {
-            tFinished = T + 1.0f*nLettersPerWord*kTimeFlip;
+        if (currentPuzzle->isInitialized && currentPuzzle->isFinished && !wasFinished) {
+            currentPuzzle->tFinished = T + 1.0f*nLettersPerWord*kTimeFlip;
             updateDataStatistics();
         }
 
+        currentPuzzle->isInitialized = true;
         newInput = false;
     }
 
     // error string upon incorrect input
     const char * textIncorrect() const {
-        switch (eIncorrect) {
-            case NotAWord:          return "Непозната дума";
-            case NotEnoughLetters:  return "Недостатъчно букви";
+        switch (currentPuzzle->eIncorrect) {
+            case Puzzle::TypeIncorrect::NotAWord:          return "Непозната дума";
+            case Puzzle::TypeIncorrect::NotEnoughLetters:  return "Недостатъчно букви";
         };
 
         return "";
@@ -863,31 +954,28 @@ struct State {
     // strings upon completion of the game
     const char * textFinished() const {
         // success strings
-        if (isGuessed) {
-            if (attempts.size() == 1) return "Гений";
-            if (attempts.size() == 2) return "Невероятно";
-            if (attempts.size() == 3) return "Отлично";
-            if (attempts.size() == 4) return "Браво";
-            if (attempts.size() == 5) return "Не е зле";
-            if (attempts.size() == 6) return "За малко";
+        if (currentPuzzle->isGuessed) {
+            if (currentPuzzle->attempts.size() == 1) return "Гений";
+            if (currentPuzzle->attempts.size() == 2) return "Невероятно";
+            if (currentPuzzle->attempts.size() == 3) return "Отлично";
+            if (currentPuzzle->attempts.size() == 4) return "Браво";
+            if (currentPuzzle->attempts.size() == 5) return "Не е зле";
+            if (currentPuzzle->attempts.size() == 6) return "За малко";
             return "Браво"; // fallback - should never happen
         }
 
         // upon failure -> show the answer
-        return answer.c_str();
+        return currentPuzzle->answer.c_str();
     }
 
     // update the dataAttempts member - to be consumed by the JS layer
     void updateDataAttempts() {
-        dataAttempts  = std::to_string(puzzleId());
-        dataAttempts += " ";
-
-        for (const auto & cur : attempts) {
-            dataAttempts += cur;
-            dataAttempts += " ";
+        for (const auto & cur : currentPuzzle->attempts) {
+            currentPuzzle->dataAttempts += cur;
+            currentPuzzle->dataAttempts += " ";
         }
 
-        dataAttempts.pop_back();
+        currentPuzzle->dataAttempts.pop_back();
     }
 
     // update the dataStatistics member - to be consumed by the JS layer
@@ -911,13 +999,14 @@ struct State {
 
     // update the dataClipboard member - to be consumed by the JS layer
     void updateDataClipboard(const TColorTheme & colors) {
-        const int n = attempts.size();
+        const int n = currentPuzzle->attempts.size();
         const std::string special = isHardMode() ? "*" : "";
-        const std::string tries = isGuessed ? std::to_string(n) : "X";
-        dataClipboard = std::string(kTitleClipboard) + " " + std::to_string(puzzleId()) + " " + tries + "/" + std::to_string(nAttemptsTotal) + special + "\n\n";
+        const std::string tries = currentPuzzle->isGuessed ? std::to_string(n) : "X";
+        dataClipboard = std::string(kTitleClipboard) + " " + (currentPuzzle->id < 0 ? "\"" + currentPuzzle->answer + "\"" : std::to_string(currentPuzzle->id))
+            + " " + tries + "/" + std::to_string(nAttemptsTotal) + special + "\n\n";
         for (int y = 0; y < n; ++y) {
             for (int x = 0; x < nLettersPerWord; ++x) {
-                switch (grid[y][x].type) {
+                switch (currentPuzzle->grid[y][x].type) {
                     case Cell::Absent:  dataClipboard += kGridEmojis.at(colors.at(EColor::AbsentFill));  break;
                     case Cell::Present: dataClipboard += kGridEmojis.at(colors.at(EColor::PresentFill)); break;
                     case Cell::Correct: dataClipboard += kGridEmojis.at(colors.at(EColor::CorrectFill)); break;
@@ -953,10 +1042,8 @@ struct State {
     }
 } g_state;
 
-// initialize the game
-void initMain() {
-    const float T = ImGui::GetTime();
-
+// initialize initial puzzle
+void initPuzzle() {
 #ifndef __EMSCRIPTEN__
     g_state.timestamp = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 #endif
@@ -982,41 +1069,21 @@ void initMain() {
         fin.open("words-daily-pool.txt");
         if (!fin.is_open()) {
             fprintf(stderr, "Failed to load dictionary from '%s'\n", "words-daily-pool.txt. Will select a random word..");
-
-            srand(0);
-            g_state.answer = g_state.words[rand()%g_state.words.size()];
         } else {
-            std::vector<std::string> wordsDailyPool;
-
             std::string word;
             while (fin >> word) {
-                wordsDailyPool.push_back(std::move(word));
-            }
-
-            // select random word based on the current puzzleId
-            {
-                const auto puzzleId = std::max(0, g_state.puzzleId());
-                printf("Puzzle ID: %d\n", puzzleId);
-
-                // the daily pool list is already randomized:
-                g_state.answer = wordsDailyPool[puzzleId%wordsDailyPool.size()];
-
-                // workaround for latin letter in word ПРЯКА
-                // ref: https://github.com/ggerganov/wordle-bg/issues/8
-                if (puzzleId == 643) {
-                    g_state.answer = "ПРЯКА";
-                }
+                g_state.wordsDailyPool.push_back(std::move(word));
             }
         }
     }
 
-    // initialize game state
-    g_state.attemptCur = "";
+    g_state.currentPuzzle = g_state.createPuzzle(g_state.puzzleId());
+    g_state.currentPuzzle->countTowardsStats = true; // only count the initial (latest) puzzle towards statistics
+}
 
-    g_state.grid.resize(g_state.nAttemptsTotal);
-    for (auto & row : g_state.grid) {
-        row.resize(g_state.nLettersPerWord);
-    }
+// initialize game state
+void initGame() {
+    const float T = ImGui::GetTime();
 
     g_state.statistics.guesses.resize(g_state.nAttemptsTotal);
 
@@ -1027,16 +1094,16 @@ void initMain() {
     }
 
     // shortcuts for settings some initial data for debugging purposes
-    //g_state.answer = "БРОНЯ";
-    //g_state.attempts.resize(2);
-    //g_state.attempts[0] = "ПРОБА";
-    //g_state.attempts[1] = "ДЕСЕТ";
+    //g_state.currentPuzzle->answer = "БРОНЯ";
+    //g_state.currentPuzzle->attempts.resize(2);
+    //g_state.currentPuzzle->attempts[0] = "ПРОБА";
+    //g_state.currentPuzzle->attempts[1] = "ДЕСЕТ";
 
     //g_state.statistics.guesses[1] = 3;
     //g_state.statistics.guesses[4] = 2;
     //g_state.statistics.guesses[5] = 8;
 
-    g_state.update(T, true);
+    g_state.update(T);
 }
 
 int ImRotateStart() {
@@ -1214,7 +1281,7 @@ void renderMain() {
     const auto & wSize = g_state.rendering.wSize;
     const auto & colors = g_state.settings.colors;
 
-    const int nAttempts = g_state.attempts.size();
+    const int nAttempts = g_state.currentPuzzle->attempts.size();
 
     // background
     drawList->AddRectFilled({ 0.0f, 0.0f }, wSize, colors.at(EColor::Background));
@@ -1312,11 +1379,11 @@ void renderMain() {
 
         for (int y = 0; y < g_state.nAttemptsTotal; ++y) {
             for (int x = 0; x < g_state.nLettersPerWord; ++x) {
-                const auto & curCell = g_state.grid[y][x];
+                const auto & curCell = g_state.currentPuzzle->grid[y][x];
 
                 // interpolation factors for the row animations
-                const float iI = y     == nAttempts                      ? ::I(T - g_state.tIncorrect, kTimeShake) : 0.0f;
-                const float iG = y + 1 == nAttempts && g_state.isGuessed ? ::I(T - g_state.tFinished - 0.2f*x*kTimeShake, kTimeShake) : 0.0f;
+                const float iI = y     == nAttempts                                     ? ::I(T - g_state.currentPuzzle->tIncorrect, kTimeShake) : 0.0f;
+                const float iG = y + 1 == nAttempts && g_state.currentPuzzle->isGuessed ? ::I(T - g_state.currentPuzzle->tFinished - 0.2f*x*kTimeShake, kTimeShake) : 0.0f;
 
                 g_state.animation(iI);
                 g_state.animation(iG);
@@ -1369,7 +1436,7 @@ void renderMain() {
         }
 
         // incorrect input
-        if (::within(T, g_state.tIncorrect, kTimeIncorrect)) {
+        if (::within(T, g_state.currentPuzzle->tIncorrect, kTimeIncorrect)) {
             renderTextWithBackground(drawList, g_state.textIncorrect(), pInfo, colors.at(EColor::Background), colors.at(EColor::Title), 1.25f, true);
         }
 
@@ -1768,7 +1835,7 @@ void renderMain() {
                     }
                 }
 
-                if (g_state.isFinished) {
+                if (g_state.currentPuzzle->isFinished) {
                     // time left
                     {
                         const ImVec2 p0 = {
@@ -1972,7 +2039,7 @@ void renderMain() {
                     }
 
                     {
-                        const std::string puzzleId = std::string("#") + std::to_string(g_state.puzzleId());
+                        const std::string puzzleId = std::string("#") + std::to_string(g_state.currentPuzzle->id);
                         renderText(puzzleId, { lr.x, lr.y, }, colors.at(EColor::PendingBorder), 1.0f, true, { -1.20f, -1.10f, });
                     }
                 }
@@ -2017,7 +2084,7 @@ void renderMain() {
 void updatePre() {
     const float T = ImGui::GetTime();
 
-    g_state.update(T, false);
+    g_state.update(T);
 
     if (g_state.settings.keyboardType != g_state.settings.keyboardTypeNew) {
         g_state.settings.keyboard = kKeyboards.at(g_state.settings.keyboardTypeNew);
@@ -2197,8 +2264,14 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
 
     bool isInitialized = false;
 
-    g_doInit = [&]() {
-        initMain();
+    g_doPuzzleInit = [&]() {
+        initPuzzle();
+
+        return true;
+    };
+
+    g_doGameInit = [&]() {
+        initGame();
 
         isInitialized = true;
 
@@ -2257,9 +2330,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
     };
 
     g_input = [&](const std::string & input) {
-        if ((g_state.isAnimating && input == kInputEnter) || g_state.isFinished) return;
+        if ((g_state.isAnimating && input == kInputEnter) || g_state.currentPuzzle->isFinished) return;
 
-        auto & cur = g_state.attemptCur;
+        auto & cur = g_state.currentPuzzle->attemptCur;
 
         if (input == kInputBackspace) {
             if (cur.size() > 0) {
@@ -2276,15 +2349,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
                 }
 
                 if (found) {
-                    g_state.attempts.emplace_back(std::move(cur));
+                    g_state.currentPuzzle->attempts.emplace_back(std::move(cur));
                     cur.clear();
                 } else {
-                    g_state.tIncorrect = ImGui::GetTime();
-                    g_state.eIncorrect = State::TypeIncorrect::NotAWord;
+                    g_state.currentPuzzle->tIncorrect = ImGui::GetTime();
+                    g_state.currentPuzzle->eIncorrect = State::Puzzle::TypeIncorrect::NotAWord;
                 }
             } else {
-                g_state.tIncorrect = ImGui::GetTime();
-                g_state.eIncorrect = State::TypeIncorrect::NotEnoughLetters;
+                g_state.currentPuzzle->tIncorrect = ImGui::GetTime();
+                g_state.currentPuzzle->eIncorrect = State::Puzzle::TypeIncorrect::NotEnoughLetters;
             }
         } else {
             if ((int) utf8_size(cur) < g_state.nLettersPerWord) {
@@ -2295,24 +2368,27 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
         g_state.newInput = true;
     };
 
-    g_setAttempts = [&](const std::string & data) {
-        g_state.attempts.clear();
-        std::stringstream ss(data);
+    g_getPuzzleId = [&]() {
+        return g_state.currentPuzzle->id;
+    };
 
+    g_setAttempts = [&](int puzzleId, const std::string & data) {
+        State::Puzzle* puzzle = g_state.getPuzzle(puzzleId);
+        puzzle->isInitialized = false;
+        puzzle->attempts.clear();
+
+        std::stringstream ss(data);
         std::string word;
-        getline(ss, word, ' ');
-        if (word == std::to_string(g_state.puzzleId())) {
-            while(getline(ss, word, ' ')){
-                g_state.attempts.push_back(std::move(word));
-            }
+        while (getline(ss, word, ' ')) {
+            puzzle->attempts.push_back(std::move(word));
         }
 
         g_state.newInput = true;
     };
 
     g_getAttempts = [&]() {
-        auto res = g_state.dataAttempts;
-        g_state.dataAttempts.clear();
+        auto res = g_state.currentPuzzle->dataAttempts;
+        g_state.currentPuzzle->dataAttempts.clear();
         return res;
     };
 
@@ -2412,7 +2488,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv) {
 #else
     g_setWindowSize(windowX, windowY);
 
-    if (g_doInit() == false) {
+    if (!g_doPuzzleInit() || !g_doGameInit()) {
         printf("Error: failed to initialize\n");
         return -2;
     }
