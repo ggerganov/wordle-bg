@@ -368,8 +368,8 @@ struct Cell {
     }
 };
 
-// help window vars
-struct Help {
+// general window vars
+struct Window {
     bool showWindow = false; // show the window on the screen
 
     // used for fade animations
@@ -382,28 +382,18 @@ struct Help {
     }
 };
 
-// advert window vars
-struct Advert {
-    bool showWindow = false; // show the window on the screen
+// puzzles window vars
+struct Puzzles : public Window {
+    int puzzleId = -1; // selected puzzle ID
 
-    // used for fade animations
-    float tShow = -100.0f;
-    float tHide = -100.0f;
-
-    // is the window currently visible?
-    bool visible(float T) const {
-        return showWindow && T > tShow;
-    }
+    // holding arrow buttons
+    bool isLeftHeld = false; // is the left arrow being held?
+    bool isRightHeld = false; // is the right arrow being held?
+    float nextChangeTime = 0.f; // timestamp of when the ID should next change
 };
 
 // statistics for the games that the player has played so far
-struct Statistics {
-    bool showWindow = false; // show the window on the screen
-
-    // used for fade animations
-    float tShow = -100.0f;
-    float tHide = -100.0f;
-
+struct Statistics : public Window {
     int nPlayed = 0;   // number of rounds played
     int streakCur = 0; // current winning streak
     int streakMax = 0; // longest winning streak
@@ -420,11 +410,6 @@ struct Statistics {
         return float(100.0f*nGuessed)/nPlayed;
     }
 
-    // is the window currently visible?
-    bool visible(float T) const {
-        return showWindow && T > tShow;
-    }
-
     // the number of attempts after which the player has guessed most words
     int maxGuesses() const {
         int result = 0;
@@ -438,12 +423,7 @@ struct Statistics {
 };
 
 // settings window vars
-struct Settings {
-    bool showWindow = false; // show the window on the screen
-
-    // used for fade animations
-    float tShow = -100.0f;
-    float tHide = -100.0f;
+struct Settings : public Window {
     float tKeyboardSwitched = -100.0f;
 
     EKeyboardType keyboardType = EKeyboardType::Phonetic;
@@ -462,11 +442,6 @@ struct Settings {
 
     bool addURL = true;
     bool addURLNew = addURL;
-
-    // is the window currently visible?
-    bool visible(float T) const {
-        return showWindow && T > tShow;
-    }
 };
 
 // global variable containing the entire game state
@@ -493,8 +468,9 @@ struct State {
     bool textClipboardVisible = true; // should the "Results copied to clipboard" text be shown?
 
     // popup windows
-    Help help;
-    Advert advert;
+    Window help;
+    Puzzles puzzlesWnd;
+    Window advert;
     Statistics statistics;
     Settings settings;
 
@@ -505,6 +481,7 @@ struct State {
     // keyboard
     float keyboardMinX = 0.0f;
     float keyboardMaxX = 0.0f;
+    bool keyboardPressHandled = false;
 
     // JS interface
     std::string dataStatistics;
@@ -602,7 +579,9 @@ struct State {
     void switchPuzzle(int puzzId) {
         const int latestPuzzleId = puzzleId();
         currentPuzzle = getPuzzle(std::min(puzzId, latestPuzzleId));
-        currentPuzzle->countTowardsStats = currentPuzzle->id == latestPuzzleId; // if the latest puzzle has changed, count the new latest puzzle towards statistics as well
+
+        // currently unneeded, as the latest puzzle can't change, because the used timestamp is taken once at the start of the game
+        //currentPuzzle->countTowardsStats = currentPuzzle->id == latestPuzzleId; // if the latest puzzle has changed, count the new latest puzzle towards statistics as well
 
         // play quick cell flip animation
         for (auto& row : currentPuzzle->grid) {
@@ -615,6 +594,15 @@ struct State {
 
         // perform an update on the new puzzle
         newInput = true;
+    }
+
+    // is any of the popup windows enabled?
+    bool hasPopup() const {
+        return help.showWindow ||
+               puzzlesWnd.showWindow ||
+               advert.showWindow ||
+               statistics.showWindow ||
+               settings.showWindow;
     }
 
     // call this at the start of each frame to initialize helper variables
@@ -1289,10 +1277,7 @@ void renderMain() {
     ImGui::SetWindowFontScale(1.0f/kFontScale);
 
     // is any of the popup windows enabled?
-    const bool hasPopup =
-        g_state.help.showWindow ||
-        g_state.statistics.showWindow ||
-        g_state.settings.showWindow;
+    const bool hasPopup = g_state.hasPopup();
 
     // draw title area
     {
@@ -1306,26 +1291,45 @@ void renderMain() {
         renderText(kTitle, c0, colors.at(EColor::Title), 3.0f, true);
 
         // draw help button
-        if (renderText(ICON_FA_QUESTION_CIRCLE, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 0.85f, 0.0f })) {
+        if (renderText(ICON_FA_QUESTION_CIRCLE, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 0.85f, 0.0f }) && !hasPopup) {
             if (g_state.help.showWindow == false) {
                 g_state.help.showWindow = true;
                 g_state.help.tShow = T;
             }
         }
 
+        // draw puzzles button
+        if (!g_state.wordsDailyPool.empty() && renderText(ICON_FA_HISTORY, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.55f, 0.0f }) && !hasPopup) {
+            if (g_state.puzzlesWnd.showWindow == false) {
+                g_state.puzzlesWnd.showWindow = true;
+                g_state.puzzlesWnd.tShow = T;
+                g_state.puzzlesWnd.puzzleId = g_state.currentPuzzle->id;
+            }
+        }
+
         // draw advert button
-        //if (renderText(ICON_FA_SCROLL, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.20f, 0.0f })) {
+        //if (renderText(ICON_FA_SCROLL, { g_state.keyboardMinX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { 2.20f, 0.0f }) && !hasPopup) {
         //    if (g_state.advert.showWindow == false) {
         //        g_state.advert.showWindow = true;
         //        g_state.advert.tShow = T;
         //    }
         //}
 
-        // draw statistics button
-        if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && hasPopup == false) {
-            if (g_state.statistics.showWindow == false) {
-                g_state.statistics.showWindow = true;
-                g_state.statistics.tShow = T;
+        if (g_state.currentPuzzle->countTowardsStats) {
+            // draw statistics button
+            if (renderText(ICON_FA_CHART_BAR, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && !hasPopup) {
+                if (g_state.statistics.showWindow == false) {
+                    g_state.statistics.showWindow = true;
+                    g_state.statistics.tShow = T;
+                }
+            }
+        }
+        else if (g_state.currentPuzzle->isFinished) {
+            // draw share button
+            if (renderText(ICON_FA_SHARE_ALT, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -2.55f, 0.0f }) && !hasPopup) {
+                g_state.updateDataClipboard(colors);
+                g_state.tShared = T;
+                SDL_SetClipboardText(g_state.dataClipboard.c_str());
             }
         }
 
@@ -1333,7 +1337,7 @@ void renderMain() {
         {
             const auto idx = ImRotateStart();
 
-            if (renderText(ICON_FA_COG, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -0.85f, 0.0f })) {
+            if (renderText(ICON_FA_COG, { g_state.keyboardMaxX, c0.y, }, colors.at(EColor::PendingBorder), 1.75f, true, { -0.85f, 0.0f }) && !hasPopup) {
                 if (g_state.settings.showWindow == false) {
                     g_state.settings.showWindow = true;
                     g_state.settings.tShow = T;
@@ -1515,7 +1519,7 @@ void renderMain() {
                     }
                 }
 
-                if (ImGui::IsMouseHoveringRect(p0, p1, true) && ImGui::IsMouseReleased(0)) {
+                if (!hasPopup && ImGui::IsMouseHoveringRect(p0, p1, true) && ImGui::IsMouseReleased(0)) {
                     g_input(ch);
                 }
             }
@@ -1650,6 +1654,136 @@ void renderMain() {
         }
     }
 
+    // puzzles window
+    if (g_state.puzzlesWnd.visible(T)) {
+        const auto tShown = ::I(T - g_state.puzzlesWnd.tShow, kTimeShow);
+
+        g_state.animation(tShown);
+
+        // fade-out main window
+        drawList->AddRectFilled({ 0.0f, 0.0f }, wSize, ImGui::ColorConvertFloat4ToU32({ 0.0f, 0.0f, 0.0f, tShown*kColorFade.w }));
+
+        bool ignoreClose = false;
+        bool forceClose = false;
+
+        const float kCurScale = std::min(1.0f, (g_state.keyboardMaxX - g_state.keyboardMinX)/473.0f);
+        const float kFontSize = 1.25f*kCurScale;
+        const float kWindowYMax = 120.0f*kCurScale;
+
+        {
+            // upper-left corner
+            const ImVec2 ul = {
+                g_state.keyboardMinX,
+                0.5f*wSize.y - 0.5f*kWindowYMax,
+            };
+
+            // lower-right corner
+            const ImVec2 lr = {
+                g_state.keyboardMaxX,
+                0.5f*wSize.y + 0.5f*kWindowYMax,
+            };
+
+            // leave some empty space near the window border
+            const float kMarginX = 20.0f;
+            const float kMarginY = 10.0f;
+
+            // window floor
+            drawList->AddRectFilled(ul, lr, colors.at(EColor::Background), g_state.settings.rectRounding ? 8.0f : 0.0f);
+            drawList->AddRect      (ul, lr, colors.at(EColor::AbsentFill), g_state.settings.rectRounding ? 8.0f : 0.0f, 0, 1.0f);
+
+            {
+                ImGui::PushTextWrapPos(lr.x - kMarginX);
+
+                ImGui::SetWindowFontScale(kFontSize/kFontScale);
+                const float kRowHeight = ImGui::CalcTextSize("A").y;
+
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[2]);
+
+                renderText("Играй предишни издания на Уърдъл:", { ul.x + (g_state.keyboardMaxX - g_state.keyboardMinX) / 2.f, ul.y + kMarginY + 1.0f*kRowHeight, },
+                           colors.at(EColor::Text), kFontSize, true);
+
+                renderText("#" + std::to_string(g_state.puzzlesWnd.puzzleId), { ul.x + (g_state.keyboardMaxX - g_state.keyboardMinX) * 0.4f, ul.y + kMarginY + 3.8f*kRowHeight, },
+                            colors.at(EColor::Text), 3.f*kCurScale, true);
+
+                ImGui::PopFont();
+
+                ImGui::PopTextWrapPos();
+
+                bool leftArrowPressed = false;
+                if (renderText(ICON_FA_ANGLE_LEFT, { ul.x + (g_state.keyboardMaxX - g_state.keyboardMinX) * 0.15f, ul.y + kMarginY + 3.8f*kRowHeight, },
+                                colors.at(EColor::Text), 3.f*kCurScale, true)) {
+                    ignoreClose = true;
+                }
+                else {
+                    leftArrowPressed = (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) || ImGui::IsKeyPressed(SDL_SCANCODE_LEFT);
+                }
+
+                bool rightArrowPressed = false;
+                if (renderText(ICON_FA_ANGLE_RIGHT, { ul.x + (g_state.keyboardMaxX - g_state.keyboardMinX) * 0.7f, ul.y + kMarginY + 3.8f*kRowHeight, },
+                                colors.at(EColor::Text), 3.f*kCurScale, true)) {
+                    ignoreClose = true;
+                }
+                else {
+                    rightArrowPressed = (ImGui::IsItemHovered() && ImGui::IsMouseDown(0)) || ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT);
+                }
+
+                if ((g_state.puzzlesWnd.isLeftHeld || g_state.puzzlesWnd.isRightHeld) &&
+                      (ImGui::IsMouseReleased(0) || ImGui::IsKeyReleased(SDL_SCANCODE_LEFT) || ImGui::IsKeyReleased(SDL_SCANCODE_RIGHT))) { // is an arrow no longer being held?
+                    ignoreClose = true;
+                    g_state.puzzlesWnd.isLeftHeld = false;
+                    g_state.puzzlesWnd.isRightHeld = false;
+                }
+                else if (g_state.puzzlesWnd.isLeftHeld || leftArrowPressed) { // is left arrow being, or about to be held?
+                    if (!g_state.puzzlesWnd.isLeftHeld) {
+                        g_state.puzzlesWnd.isLeftHeld = true;
+                        g_state.puzzlesWnd.nextChangeTime = T + 0.5f;
+                        g_state.puzzlesWnd.puzzleId = g_state.puzzlesWnd.puzzleId == 0 ? g_state.puzzleId() : g_state.puzzlesWnd.puzzleId - 1;
+                    }
+                    else if (T >= g_state.puzzlesWnd.nextChangeTime) {
+                        g_state.puzzlesWnd.nextChangeTime = T + 0.05f;
+                        g_state.puzzlesWnd.puzzleId = g_state.puzzlesWnd.puzzleId == 0 ? g_state.puzzleId() : g_state.puzzlesWnd.puzzleId - 1;
+                    }
+                }
+                else if (g_state.puzzlesWnd.isRightHeld || rightArrowPressed) { // is right arrow being, or about to be held?
+                    if (!g_state.puzzlesWnd.isRightHeld) {
+                        g_state.puzzlesWnd.isRightHeld = true;
+                        g_state.puzzlesWnd.nextChangeTime = T + 0.5f;
+                        g_state.puzzlesWnd.puzzleId = g_state.puzzlesWnd.puzzleId == g_state.puzzleId() ? 0 : g_state.puzzlesWnd.puzzleId + 1;
+                    }
+                    else if (T >= g_state.puzzlesWnd.nextChangeTime) {
+                        g_state.puzzlesWnd.nextChangeTime = T + 0.05f;
+                        g_state.puzzlesWnd.puzzleId = g_state.puzzlesWnd.puzzleId == g_state.puzzleId() ? 0 : g_state.puzzlesWnd.puzzleId + 1;
+                    }
+                }
+
+                if (g_state.puzzlesWnd.puzzleId != g_state.currentPuzzle->id &&
+                      (renderText(ICON_FA_PLAY, { ul.x + (g_state.keyboardMaxX - g_state.keyboardMinX) * 0.85f, ul.y + kMarginY + 3.8f*kRowHeight, }, colors.at(EColor::CorrectFill), 2.f*kCurScale, true) ||
+                       ImGui::IsKeyPressed(SDL_SCANCODE_RETURN))) {
+                    forceClose = true;
+                    g_state.keyboardPressHandled = true;
+                    g_state.switchPuzzle(g_state.puzzlesWnd.puzzleId);
+                }
+            }
+        }
+
+        // close puzzles window
+        if (tShown >= 1.0f) {
+            if (forceClose || (!ignoreClose && ImGui::IsMouseReleased(0))) {
+                g_state.puzzlesWnd.showWindow = false;
+                g_state.puzzlesWnd.tHide = T;
+            }
+        }
+    } else {
+        const auto tHidden = ::I(T - g_state.puzzlesWnd.tHide, kTimeShow);
+
+        g_state.animation(tHidden);
+
+        if (tHidden < 1.0f) {
+            // fade-in main window
+            drawList->AddRectFilled({ 0.0f, 0.0f }, wSize, ImGui::ColorConvertFloat4ToU32({ 0.0f, 0.0f, 0.0f, (1.0f - tHidden)*kColorFade.w }));
+        }
+    }
+
     // advert window
     if (g_state.advert.visible(T)) {
         const auto tShown = ::I(T - g_state.advert.tShow, kTimeShow);
@@ -1701,19 +1835,6 @@ void renderMain() {
                         g_state.dataURL = "https://otgatnovini.ggerganov.com";
                     }
                 }
-            }
-
-            // copy results to clipboard
-            if (g_state.textClipboardVisible && ::within(T, g_state.tShared, kTimeClipboard)) {
-                const float kBaseMargin = 25.0f;
-                const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
-
-                const ImVec2 p0 = {
-                    0.5f*g_state.rendering.wSize.x,
-                    g_state.heightTitle + 0.1f*kGridHeightMax + kBaseMargin,
-                };
-
-                renderTextWithBackground(drawList, "Резултатите са копирани в клипборда", p0, colors.at(EColor::Background), colors.at(EColor::Title), 1.25f, true);
             }
         }
 
@@ -1865,19 +1986,6 @@ void renderMain() {
                         }
                     }
                 }
-            }
-
-            // copy results to clipboard
-            if (g_state.textClipboardVisible && ::within(T, g_state.tShared, kTimeClipboard)) {
-                const float kBaseMargin = 25.0f;
-                const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
-
-                const ImVec2 p0 = {
-                    0.5f*g_state.rendering.wSize.x,
-                    g_state.heightTitle + 0.1f*kGridHeightMax + kBaseMargin,
-                };
-
-                renderTextWithBackground(drawList, "Резултатите са копирани в клипборда", p0, colors.at(EColor::Background), colors.at(EColor::Title), 1.25f, true);
             }
         }
 
@@ -2068,6 +2176,19 @@ void renderMain() {
         }
     }
 
+    // copy results to clipboard
+    if (g_state.textClipboardVisible && ::within(T, g_state.tShared, kTimeClipboard)) {
+        const float kBaseMargin = 25.0f;
+        const float kGridHeightMax = g_state.rendering.wSize.y - g_state.heightTitle - g_state.heightKeyboard - 2.0f*kBaseMargin;
+
+        const ImVec2 p0 = {
+            0.5f*g_state.rendering.wSize.x,
+            g_state.heightTitle + 0.1f*kGridHeightMax + kBaseMargin,
+        };
+
+        renderTextWithBackground(drawList, "Резултатите са копирани в клипборда", p0, colors.at(EColor::Background), colors.at(EColor::Title), 1.25f, true);
+    }
+
     // animation indicator in the lower-left corner of the screen
     if (g_state.isAnimating) {
         drawList->AddRectFilled({ 0.0f, wSize.y - 6.0f, }, { 6.0f, wSize.y, }, ImGui::ColorConvertFloat4ToU32({ 1.0f, 1.0f, 0.0f, 0.5f, }));
@@ -2117,78 +2238,81 @@ void updatePre() {
 // called after rendering each frame
 void updatePost() {
     // handle keyboard presses
-    switch (g_state.settings.keyboardType) {
-        case EKeyboardType::Phonetic:
-            {
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("А");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Б");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ц");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("Д");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("Ф");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Г");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Х");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("И");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Й");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("К");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("Л");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("М");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Н");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("О");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("П");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("Я");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("Р");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("С");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Т");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("У");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Ж");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("В");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Ь");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Ъ");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("З");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE))        g_input("Ч");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSLASH))    g_input("Ю");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ш");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHTBRACKET)) g_input("Щ");
-            } break;
-        case EKeyboardType::BDS:
-            {
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("Ь");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Ф");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ъ");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("А");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("О");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Ж");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Г");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("С");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Т");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("Н");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("В");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("П");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Х");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("Д");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("З");
-                //if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("ы");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("И");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("Я");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Ш");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("К");
-                //if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Э");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("У");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Й");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Щ");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("Ю");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_SEMICOLON))    g_input("М");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_APOSTROPHE))   g_input("Ч");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ц");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_COMMA))        g_input("Р");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_PERIOD))       g_input("Л");
-                if (ImGui::IsKeyPressed(SDL_SCANCODE_SLASH))        g_input("Б");
-            } break;
+    if (!g_state.hasPopup() && !g_state.keyboardPressHandled) {
+        switch (g_state.settings.keyboardType) {
+            case EKeyboardType::Phonetic:
+                {
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("А");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Б");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ц");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("Д");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("Ф");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Г");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Х");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("И");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Й");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("К");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("Л");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("М");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Н");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("О");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("П");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("Я");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("Р");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("С");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Т");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("У");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Ж");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("В");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Ь");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Ъ");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("З");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_GRAVE))        g_input("Ч");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSLASH))    g_input("Ю");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ш");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_RIGHTBRACKET)) g_input("Щ");
+                } break;
+            case EKeyboardType::BDS:
+                {
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_A))            g_input("Ь");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_B))            g_input("Ф");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_C))            g_input("Ъ");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_D))            g_input("А");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_E))            g_input("Е");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_F))            g_input("О");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_G))            g_input("Ж");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_H))            g_input("Г");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_I))            g_input("С");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_J))            g_input("Т");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_K))            g_input("Н");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_L))            g_input("В");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_M))            g_input("П");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_N))            g_input("Х");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_O))            g_input("Д");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_P))            g_input("З");
+                    //if (ImGui::IsKeyPressed(SDL_SCANCODE_Q))            g_input("ы");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_R))            g_input("И");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_S))            g_input("Я");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_T))            g_input("Ш");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_U))            g_input("К");
+                    //if (ImGui::IsKeyPressed(SDL_SCANCODE_V))            g_input("Э");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_W))            g_input("У");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_X))            g_input("Й");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_Y))            g_input("Щ");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_Z))            g_input("Ю");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_SEMICOLON))    g_input("М");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_APOSTROPHE))   g_input("Ч");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_LEFTBRACKET))  g_input("Ц");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_COMMA))        g_input("Р");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_PERIOD))       g_input("Л");
+                    if (ImGui::IsKeyPressed(SDL_SCANCODE_SLASH))        g_input("Б");
+                } break;
+        }
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_RETURN))       g_input(kInputEnter);
+        if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE))    g_input(kInputBackspace);
     }
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_RETURN))       g_input(kInputEnter);
-    if (ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE))    g_input(kInputBackspace);
+    g_state.keyboardPressHandled = false;
 }
 
 void deinitMain() {
