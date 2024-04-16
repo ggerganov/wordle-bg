@@ -546,12 +546,6 @@ struct State {
 
             // the daily pool list is already randomized:
             puzzle->answer = wordsDailyPool[puzzle->id % wordsDailyPool.size()];
-
-            // workaround for latin letter in word ПРЯКА
-            // ref: https://github.com/ggerganov/wordle-bg/issues/8
-            // if (puzzleId == 643) {
-            //    puzzle->answer = "ПРЯКА";
-            //}
         }
 
         // Initialize grid
