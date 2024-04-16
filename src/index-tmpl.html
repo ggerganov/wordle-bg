@@ -81,10 +81,10 @@
                 updateWindowSize();
 
                 if (Module.get_puzzle_id() >= 0) {
-                  var dataAttempts = Module.get_attempts();
-                  if (dataAttempts.length > 0) {
-                      localStorage["attempts_" + Module.get_puzzle_id()] = dataAttempts;
-                  }
+                    var dataAttempts = Module.get_attempts();
+                    if (dataAttempts.length > 0) {
+                        localStorage["attempts_" + Module.get_puzzle_id()] = dataAttempts;
+                    }
                 }
 
                 var dataStatistics = Module.get_statistics();
