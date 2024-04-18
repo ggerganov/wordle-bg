@@ -80,9 +80,11 @@
 
                 updateWindowSize();
 
-                var dataAttempts = Module.get_attempts();
-                if (dataAttempts.length > 0) {
-                    localStorage.attempts = dataAttempts;
+                if (Module.get_puzzle_id() >= 0) {
+                    var dataAttempts = Module.get_attempts();
+                    if (dataAttempts.length > 0) {
+                        localStorage["attempts_" + Module.get_puzzle_id()] = dataAttempts;
+                    }
                 }
 
                 var dataStatistics = Module.get_statistics();
@@ -187,8 +189,27 @@
                         Module.set_timestamp(T);
                     }
 
-                    if (localStorage.getItem('attempts') !== null) {
-                        Module.set_attempts(localStorage.attempts);
+                    if (Module.do_puzzle_init() == false) {
+                        failedToInitialize = true;
+                        window.onerror('Failed to initialize initial puzzle!');
+                        return;
+                    }
+
+                    // Get puzzle attempts
+                    let attemptsKeys = Object.keys(localStorage).filter(key => key.startsWith("attempts_"));
+                    for (const key of attemptsKeys) {
+                        const keySplit = key.split('_');
+                        if (keySplit[1].length == 0) {
+                            localStorage.removeItem(key);
+                            continue;
+                        }
+                        const puzzleID = Number(keySplit[1]);
+                        if (puzzleID == NaN || puzzleID < 0) {
+                            localStorage.removeItem(key);
+                            continue;
+                        }
+
+                        Module.set_attempts(puzzleID, localStorage[key]);
                     }
 
                     if (localStorage.getItem('statistics') !== null) {
@@ -199,9 +220,9 @@
                         Module.set_settings(localStorage.settings);
                     }
 
-                    if (Module.do_init() == false) {
+                    if (Module.do_game_init() == false) {
                         failedToInitialize = true;
-                        window.onerror('Failed to initialize WASM module');
+                        window.onerror('Failed to initialize game state!');
                         return;
                     }
 
