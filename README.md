@@ -49,4 +49,5 @@ cp ./bin/* /var/www/html/
 
 - [@rgerganov](https://github.com/rgerganov) for the idea
 - [@ibob](https://github.com/ibob) for helping me find a dictionary with Bulgarian words
+- [@Vankata453](https://github.com/Vankata453) for adding the ability to play past puzzles (https://github.com/ggerganov/wordle-bg/pull/10)
 - Make sure to check out the original at: https://www.powerlanguage.co.uk/wordle/
