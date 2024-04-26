@@ -119,7 +119,10 @@
                 var dataClipboard = Module.get_clipboard();
                 if (dataClipboard.length > 0) {
                     console.log(dataClipboard);
-                    if (navigator.share) {
+
+                    // Restrict share dialog to mobile devices only, since desktop OS-es tend to not feature copying to clipboard
+                    // See: https://github.com/ggerganov/wordle-bg/issues/11
+                    if (navigator.share && isMobile) {
                         navigator.share({
                                         title: document.title,
                                         text: dataClipboard
