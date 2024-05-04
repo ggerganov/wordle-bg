@@ -168,7 +168,7 @@
             function init() {
                 // If sharing is supported, hide the "Results copied to clipboard" text by default.
                 // The text will be shown only if sharing fails.
-                if (navigator.share) {
+                if (navigator.share && isMobile) {
                     Module.set_clipboard_text_visible(false);
                 }
 
